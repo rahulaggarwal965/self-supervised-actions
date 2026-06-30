@@ -30,10 +30,13 @@ A latent target removes the pixel-MSE blur escape hatch, so the model must route
 
 ![codebook usage — collapsed to 1](codebook_usage.png)
 ![code↔action confusion — no structure](code_action_confusion.png)
+![decoded counterfactual — every code decodes to a near-blank frame](decoded_counterfactual.png)
 
 ## Interpretation
 
 A new, worse failure: **representational collapse**. The encoder and its EMA teacher co-collapse to a near-constant embedding (`z_std` ≈ 0), so predicting the next latent is trivial (latent MSE ≈ 0) and the apparent no-action gap is a **mirage** — any prediction is near-zero error. With a constant representation, all transitions look identical, so the codebook collapses back to 1 code. The latent target is right in principle but unconstrained: nothing stops the trivial constant solution.
+
+The **decoded counterfactual** (decoder probe trained on the frozen encoder; rerun `proud-gorge-7`) makes the collapse visible: the agent disappears and all 16 codes decode to the same washed-out, near-blank frame. There is nothing for the probe to reconstruct — the encoder maps every frame to ~the same vector — so applying different codes changes nothing in pixel space.
 
 ## Conclusion → next
 

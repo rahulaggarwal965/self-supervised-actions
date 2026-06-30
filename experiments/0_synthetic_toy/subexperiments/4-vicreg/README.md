@@ -30,10 +30,13 @@ The VICReg variance term will prevent the encoder from collapsing (`z_std` → ~
 
 ![codebook usage — full 16/16](codebook_usage.png)
 ![code↔action confusion — diffuse](code_action_confusion.png)
+![decoded counterfactual — reconstructions are real but barely change across codes](decoded_counterfactual.png)
 
 ## Interpretation
 
 The **mechanism is now fully healthy**: no representational collapse (`z_std` ≈ 1), full codebook (16/16), a real no-action gap, and a non-trivial latent MSE (the prediction task is no longer degenerate). Yet NMI is still ~0.01 — the codes are real, used, and genuinely help prediction, but they still don't track L/R/U/D. **Every mechanistic failure is fixed; the remaining obstacle is semantic** — the codes encode *something* useful that isn't the action.
+
+The **decoded counterfactual** (decoder probe; rerun `smooth-terrain-9`) shows the contrast with collapse and with the eventual control: the agent/distractors now reconstruct (the encoder is healthy), but the predicted frame is *nearly the same across all 16 codes* — only faint, diffuse differences, no distinct per-code move. The codes are alive but not action-selective — exactly what NMI ≈ 0.01 says, now visible in pixels. (Compare the [fixed-start control](../6-fixed-start/), where each code moves the agent a clearly distinct direction.)
 
 ## Conclusion → next
 

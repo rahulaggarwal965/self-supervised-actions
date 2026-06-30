@@ -29,6 +29,7 @@ If the codes were encoding absolute position, forcing the code to depend only on
 
 ![codebook usage — full 16/16](codebook_usage.png)
 ![code↔action confusion — used, still not action-aligned](code_action_confusion.png)
+![decoded counterfactual — codes decode to nearly the same diffuse frame](decoded_counterfactual.png)
 
 ## Interpretation
 
@@ -37,6 +38,8 @@ NMI essentially **unchanged** — the code is now a pure function of `Δz` and *
 > **NMI(code, position) = 0.064  vs  NMI(code, action) = 0.013**
 
 The codes align ~5× more strongly with *where the agent is* than with *which way it moved*. The obstacle is the encoder's lack of position-invariance — now **confirmed, not conjectured**.
+
+The **decoded counterfactual** (decoder probe; rerun `sparkling-water-10`) reads like Exp 4: all 16 codes decode to almost the same diffuse frame, the agent barely shifting between them — conditioning the code on `Δz` did not buy distinct, action-aligned outcomes. The clean per-code moves only appear once position is pinned in the [fixed-start control](../6-fixed-start/).
 
 ## Conclusion → next
 

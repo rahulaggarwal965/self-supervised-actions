@@ -72,3 +72,19 @@ def test_forward_invariant_inverse_runs():
     assert out.a_q.shape == (2, 8)
     assert out.z_ctx.shape == (2, 32)
     assert out.vq["codes"].shape == (2,)
+
+
+def test_forward_invariant_inverse_hires_runs():
+    # higher-res variant: action read from the 16x16 (level=2, 64ch) encoder map
+    enc = Encoder(dim=32)
+    model = LatentActionModel(
+        encoder=enc,
+        inverse=InvariantInverseModel(feat_ch=64, action_dim=8, feat_level=2),
+        quantizer=VectorQuantizer(num_codes=4, dim=8),
+        dynamics=Dynamics(dim=32, action_dim=8),
+        head=LatentHead(),
+        teacher_momentum=0.99,
+    )
+    out = model(_batch())
+    assert out.a_q.shape == (2, 8)
+    assert out.z_ctx.shape == (2, 32)

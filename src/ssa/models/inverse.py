@@ -42,12 +42,25 @@ class InvariantInverseModel(nn.Module):
     shift-equivariant; the spatial mean is then shift-invariant. The result: the
     code depends on the *local* change pattern (a left-move's signature), not on
     the agent's absolute position.
+
+    ``feat_level`` selects which encoder feature map the action is read from
+    (the model passes it to ``encoder.features(x, level=feat_level)``). ``None``
+    uses the final coarse map; a smaller level (e.g. 2 → 16x16) gives finer
+    spatial resolution so a small, sub-cell motion is resolvable. ``feat_ch``
+    must match the channel count at that level.
     """
 
     spatial = True
 
-    def __init__(self, feat_ch: int = 256, action_dim: int = 64, hidden: int = 256) -> None:
+    def __init__(
+        self,
+        feat_ch: int = 256,
+        action_dim: int = 64,
+        hidden: int = 256,
+        feat_level: int | None = None,
+    ) -> None:
         super().__init__()
+        self.feat_level = feat_level
         self.net = nn.Sequential(
             nn.Conv2d(feat_ch, hidden, 3, padding=1, padding_mode="circular"),
             nn.GroupNorm(8, hidden),

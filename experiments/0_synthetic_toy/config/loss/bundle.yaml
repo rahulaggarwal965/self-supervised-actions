@@ -1,0 +1,42 @@
+# "Make the action necessary" bundle: vicreg terms plus partial action supervision
+# (anchor code i -> action i on ~2.5% of transitions) and a decorrelate-code-from-
+# position term. Intended with model=minimal_invariant_hires and a small codebook
+# (model.num_codes=6). Targets the obstacle that the action is under-used because the
+# next state is predictable from the current state. Select with `loss=bundle`.
+terms:
+  - name: prediction
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.prediction.PredictionLoss
+  - name: vq
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.vq.VQLoss
+      beta: 0.25
+  - name: margin
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.margin.MarginLoss
+      m: 0.002
+  - name: usage
+    weight: 0.1
+    fn:
+      _target_: ssa.losses.usage.UsageLoss
+      sample_weight: 1.0
+      batch_weight: 1.0
+  - name: vicreg
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.vicreg.VICRegLoss
+      var_weight: 25.0
+      cov_weight: 1.0
+      gamma: 1.0
+  - name: action_sup
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.supervision.ActionSupervisionLoss
+      label_frac: 0.025
+  - name: decorrelation
+    weight: 2.0
+    fn:
+      _target_: ssa.losses.decorrelation.DecorrelationLoss

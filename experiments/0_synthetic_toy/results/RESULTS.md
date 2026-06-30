@@ -1,43 +1,48 @@
 # Results — Stage-0 Synthetic Toy
 
-Procedural sprite toy (one red agent moving L/R/U/D + static distractors), K=16, 5000 steps/run on `bench`. Metrics/figures regenerated from each fetched checkpoint on the held-out val set (seed+1). Five experiments walking the design doc's levers.
+Procedural sprite toy (one red agent moving L/R/U/D + static distractors), K=16, 5000 steps/run on `bench`. Metrics regenerated from each fetched checkpoint on the held-out val set (seed+1). Six experiments walking the design doc's levers.
 
 ## Headline
 
-| Metric (val) | Baseline | + margin + usage | + delta | + latent | + latent + VICReg | Target |
-|---|---|---|---|---|---|---|
-| codes used / perplexity | 1 / 1.00 | 7 / 5.60 | 10 / 9.11 | 1 / 1.00 | **16 / 15.70** | non-collapsed |
-| encoder `z_std` | — | — | — | 0.007 ⚠ | **1.01** ✓ | not ~0 |
-| no-action gap | 3.2e-6 | 2.1e-4 | 7.6e-7 | 4.9e-3 (mirage) | **3.6e-3 (real)** | clearly > 0 |
-| NMI(code, action) | 0.00 | 0.003 | 0.008 | 0.00 | **0.011** | > 0.8 |
-| pred MSE | 0.0083 (px) | 0.0096 (px) | 0.0117 (Δ) | 0.0004 (lat†) | 0.037 (lat) | — |
+| Metric (val) | Baseline | +marg+use | +delta | +latent | +latent+VICReg | +delta-code | Target |
+|---|---|---|---|---|---|---|---|
+| codes / perplexity | 1 / 1.0 | 7 / 5.6 | 10 / 9.1 | 1 / 1.0 | 16 / 15.7 | 16 / 15.6 | non-collapsed |
+| encoder `z_std` | — | — | — | 0.007 ⚠ | 1.01 ✓ | 1.02 ✓ | not ~0 |
+| no-action gap | 3e-6 | 2e-4 | ~0 | 4.9e-3* | 3.6e-3 | 2.6e-3 | real, > 0 |
+| NMI(code, action) | 0.00 | 0.003 | 0.008 | 0.00 | 0.011 | **0.013** | > 0.8 |
 
-† collapsed — trivially low. **Progress:** the latent + VICReg run is the first to (a) keep the representation healthy (`z_std≈1`), (b) use the whole codebook (16/16), and (c) make the action *genuinely* necessary (a real positive no-action gap, ~14% lower error with the action). **Still missing:** NMI ~0 — the codes are useful but encode the wrong thing.
+*mirage (collapsed target). **The mechanism is now fully healthy — no collapse, full codebook, a real no-action gap — yet NMI stays ~0.01.** Action discovery is not achieved; the obstacle is now purely *semantic*.
 
-## The arc
+## The arc (what each lever fixed)
 
-- **Baseline (pred + VQ):** total collapse (1 code), action ignored. The static future makes a blurry prediction MSE-cheap.
-- **+ margin + usage:** usage breaks *codebook* collapse (7 codes), but the action is only weakly necessary and codes aren't action-selective (NMI ~0).
-- **+ delta:** predicting `I_{t+1}−I_t` did **not** raise the action's leverage (gap back to ~0); the agent never moves across the counterfactual. *Hypothesis falsified.*
-- **+ latent (V-JEPA):** predicting teacher latents **collapsed the representation** (`z_std≈0.007`); tiny MSE and a big gap were artifacts of a near-constant target.
-- **+ latent + VICReg:** variance/covariance regularization fixes the collapse (`z_std≈1.01`), all 16 codes are used, and the no-action gap is now **real** (0.0036). But NMI stays ~0.01 — see below.
+1. **Codebook collapse** → usage loss (1 → 7 codes).
+2. **Action not necessary under pixel/delta MSE** → only the latent target makes it matter (delta pixel prediction did *not* help — hypothesis falsified).
+3. **Representation collapse under latent prediction** → VICReg (`z_std` 0.007 → 1.01); first non-degenerate run, real gap, 16/16 codes.
+4. **Code might encode absolute state** → fed the inverse model the latent change `Δz = z_{t+1}−z_t` only (`delta_input`). Result: NMI essentially unchanged (0.011 → 0.013).
 
-![latent+VICReg codebook usage (all 16 codes used)](vicreg/codebook_usage.png)
-![latent+VICReg code-action confusion (used, but not action-aligned)](vicreg/code_action_confusion.png)
+![delta-code codebook usage (16/16 used)](deltacode/codebook_usage.png)
+![delta-code code-action confusion (used, still not action-aligned)](deltacode/code_action_confusion.png)
 
-## Interpretation
+## Interpretation — the remaining obstacle is semantic, not mechanistic
 
-Each lever fixed exactly what it targets, and the experiments isolate a clean chain of obstacles:
+Every mechanistic failure has been fixed and confirmed: collapse (both kinds), and action necessity. But the codes still carry ~no information about the true L/R/U/D action, even when the code is a pure function of `Δz`. The most likely reason:
 
-1. **Codebook collapse** → fixed by the usage loss.
-2. **Action not necessary under pixel/delta MSE** → only the latent target (which penalizes the blur) makes the action matter.
-3. **Representation collapse under latent prediction** → fixed by VICReg.
-4. **Remaining obstacle: the codes encode *state*, not *action*.** With a healthy representation, the inverse model `f(z_t, z_{t+1})` still routes information that lowers latent MSE — most likely the agent's *position* — into the 16 codes, because nothing forces `a_t` to describe the *change* rather than the scene. The action helps prediction (real gap), but as a position/scene code, not a direction code, so NMI vs the true L/R/U/D stays ~0.
+> **The encoder's latent space is not position-invariant**, so the latent change `Δz` entangles *where* the agent is with *which direction* it moved. The 16 VQ codes then capture the dominant (position-dependent) variance of `Δz` rather than the four clean directions — so NMI(code, action) ≈ 0 while the code still helps prediction (real gap).
 
-## Next levers (priority)
+In other words, "the action" is not a clean, low-dimensional, position-invariant quantity in this learned latent space, so a bottlenecked code over `Δz` does not recover it.
 
-1. **Make the code a function of the latent *change*.** Feed the inverse model the latent delta `Δz = z_{t+1} − z_t` (dropping raw `z_t` from the code's input) so the code *cannot* encode absolute position — only the transition. This is the most direct attack on obstacle #4 and a small change to `InverseModel`.
-2. **Contrastive action loss** — pull together codes for transitions with similar `Δz` and push apart dissimilar ones, structuring the codebook by transition type (direction) directly.
-3. Sweep K and the VICReg/margin weights now that the pipeline is non-degenerate.
+**This is now confirmed, not conjectured.** On the delta-code checkpoint, bucketing the agent's position into a 4×4 grid:
 
-Verdict vs. Stage-0 (NMI > 0.8 + real no-action gap): **gap now real; NMI not yet.** The pipeline is finally non-degenerate (no collapse, action necessary, full codebook), so the remaining problem — codes encoding state instead of change — is now cleanly isolated and directly addressable.
+> `NMI(code, position-bucket) = 0.064`  vs  `NMI(code, action) = 0.013`
+
+The codes align ~5× more strongly with *where the agent is* than with *which way it moved* (both are low — the codes are diffuse — but position clearly dominates action).
+
+## Where this leaves us (strategic — needs a direction)
+
+The cheap and medium levers from the design doc are now exhausted; the pipeline is healthy but semantically unaligned. Candidate deeper directions, none obviously cheap:
+
+1. **Position-invariant / object-centric structure** so that "moved left" looks the same regardless of where the agent is (the design doc's object-centric route). Given the confirmed position-entanglement, this is the most principled fix — and the biggest change.
+2. **Contrastive action loss** on `Δz` — but since `Δz` is position-entangled, contrastive alone likely will not separate directions without (1).
+3. **Reconsider the toy or the metric** — a single agent on a plain background makes direction inherently entangled with position in a generic CNN latent; a translation-equivariant encoder, or evaluating against (action × position), may be the more honest framing.
+
+Verdict vs. Stage-0 (NMI > 0.8): **not met after six experiments.** Net result: a clean, evidence-backed map of *why* — collapse and necessity are solved; the open problem is making the action a position-invariant latent quantity. That is a genuine design decision, not another quick knob.

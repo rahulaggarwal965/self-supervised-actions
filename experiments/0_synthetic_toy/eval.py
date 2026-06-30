@@ -24,7 +24,7 @@ from ssa.eval.counterfactual import counterfactual_grid  # noqa: E402
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt", default="model.pt")
-    ap.add_argument("--out", default="results")
+    ap.add_argument("--out", default="subexperiments/0-baseline")
     args = ap.parse_args()
 
     with initialize(version_base=None, config_path="config"):

@@ -33,4 +33,7 @@ uv run python train.py
 ```
 
 ## Results
-See `results/RESULTS.md` (written after runs).
+Each run is logged as its own ordered subexperiment under `subexperiments/<n-name>/`
+(a lab-notebook `README.md` with the exact command to reproduce, the going-in
+hypothesis, metrics+figures, interpretation, and conclusion→next). The synthesis
+across all of them is `subexperiments/RESULTS.md`.

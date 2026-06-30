@@ -1,6 +1,18 @@
 # Results — Stage-0 Synthetic Toy
 
-Procedural sprite toy (one red agent moving L/R/U/D + static distractors), K=16, 5000 steps/run on `bench`. Metrics regenerated from each fetched checkpoint on the held-out val set (seed+1). Six experiments walking the design doc's levers.
+Procedural sprite toy (one red agent moving L/R/U/D + static distractors), K=16, 5000 steps/run on `bench`. Metrics regenerated from each fetched checkpoint on the held-out val set (seed+1). This file is the **synthesis**; each subexperiment below has its own lab-notebook entry (config to reproduce · hypothesis · metrics+figures · interpretation · conclusion→next).
+
+## The throughline (one lever at a time)
+
+| # | Subexperiment | Lever added | Outcome | NMI |
+|---|---|---|---|---|
+| 0 | [baseline](0-baseline/) | pixel + VQ | codebook collapse, action ignored | 0.00 |
+| 1 | [+margin+usage](1-full-losses/) | no-action margin + usage entropy | collapse fixed (7 codes), still not semantic | 0.003 |
+| 2 | [+delta](2-delta/) | residual pixel prediction | gap→0; pixel target lets action be ignored | 0.008 |
+| 3 | [+latent](3-latent/) | V-JEPA latent target | **representational collapse** (z_std≈0) | 0.00 |
+| 4 | [+VICReg](4-vicreg/) | variance/covariance anti-collapse | mechanism healthy; obstacle now semantic | 0.011 |
+| 5 | [+delta-code](5-delta-code/) | code from Δz only | codes encode **position**, not action (confirmed) | 0.013 |
+| 6 | [fixed-start **control**](6-fixed-start/) | pin agent position | **action discovered** once position decoupled | **0.618** |
 
 ## Headline
 
@@ -20,8 +32,8 @@ Procedural sprite toy (one red agent moving L/R/U/D + static distractors), K=16,
 3. **Representation collapse under latent prediction** → VICReg (`z_std` 0.007 → 1.01); first non-degenerate run, real gap, 16/16 codes.
 4. **Code might encode absolute state** → fed the inverse model the latent change `Δz = z_{t+1}−z_t` only (`delta_input`). Result: NMI essentially unchanged (0.011 → 0.013).
 
-![delta-code codebook usage (16/16 used)](deltacode/codebook_usage.png)
-![delta-code code-action confusion (used, still not action-aligned)](deltacode/code_action_confusion.png)
+![delta-code codebook usage (16/16 used)](5-delta-code/codebook_usage.png)
+![delta-code code-action confusion (used, still not action-aligned)](5-delta-code/code_action_confusion.png)
 
 ## Interpretation — the remaining obstacle is semantic, not mechanistic
 
@@ -50,7 +62,7 @@ To test the diagnosis directly, I pinned the agent's start position (same spot e
 
 NMI jumped **~46×** (0.013 → 0.62), and the confusion matrix shows each code is now action-selective (one action per code, ~4 codes per action):
 
-![fixed-start code-action confusion](fixedstart/code_action_confusion.png)
+![fixed-start code-action confusion](6-fixed-start/code_action_confusion.png)
 
 **This confirms both the diagnosis and the method.** When position is decoupled from the action, the pipeline (latent prediction + VICReg anti-collapse + a delta-conditioned code) genuinely discovers the four actions. The failure on the random-position toy was the position confound, not a broken mechanism.
 
@@ -58,7 +70,7 @@ NMI jumped **~46×** (0.013 → 0.62), and the confusion matrix shows each code 
 
 Latent-head runs have no decoder, so "what does each code *do*?" is invisible in pixel space. To make it visible without touching the trained model, I train a small post-hoc **decoder probe** `D(z) → pixels` on the *frozen* encoder (reconstructs next frames from their latents), then decode each code's predicted next-latent `D(dynamics(z_t, code_k))` into an actual frame. This is a faithful read-out of the learned dynamics, not a second model fit to the task.
 
-![fixed-start decoded counterfactual: each code moves the agent a distinct direction](fixedstart/decoded_counterfactual.png)
+![fixed-start decoded counterfactual: each code moves the agent a distinct direction](6-fixed-start/decoded_counterfactual.png)
 
 From a single `I_t`, each of the 16 codes decodes to a distinct predicted next position of the red agent (reconstructions are soft — a 500-step probe on frozen latents — but the displacement direction is clearly code-dependent, with the ~4-codes-per-action grouping visible). This is the NMI 0.62 result rendered in pixels: the codes carry the action. (Logged live to wandb as `counterfactual/decoded` for every latent run.)
 

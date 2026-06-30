@@ -1,0 +1,74 @@
+# Resolved Hydra config for subexperiment 2-delta.
+# Reproduce: uv run python train.py loss=full +model.head.delta=true
+model:
+  dim: 256
+  action_dim: 64
+  num_codes: 16
+  teacher_momentum: null
+  encoder:
+    _target_: ssa.models.encoder.Encoder
+    in_ch: 3
+    dim: 256
+  inverse:
+    _target_: ssa.models.inverse.InverseModel
+    dim: 256
+    action_dim: 64
+  quantizer:
+    _target_: ssa.models.quantizer.VectorQuantizer
+    num_codes: 16
+    dim: 64
+  dynamics:
+    _target_: ssa.models.dynamics.Dynamics
+    dim: 256
+    action_dim: 64
+  head:
+    _target_: ssa.models.heads.PixelDecoder
+    dim: 256
+    delta: true
+data:
+  train_size: 8192
+  eval_size: 1024
+  seed: 0
+  batch_size: 128
+  num_workers: 4
+  env:
+    size: 64
+    agent: 6
+    step: 6
+    n_distractors: 2
+    history: 1
+loss:
+  terms:
+  - name: prediction
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.prediction.PredictionLoss
+  - name: vq
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.vq.VQLoss
+      beta: 0.25
+  - name: margin
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.margin.MarginLoss
+      m: 0.002
+  - name: usage
+    weight: 0.1
+    fn:
+      _target_: ssa.losses.usage.UsageLoss
+      sample_weight: 1.0
+      batch_weight: 1.0
+train:
+  max_steps: 5000
+  lr: 0.0003
+  eval_every: 500
+  log_every: 20
+  grad_clip: 1.0
+  probe_steps: 500
+  device: cuda
+seed: 0
+experiment: 0_synthetic_toy
+wandb:
+  project: ssa
+  mode: online

@@ -10,6 +10,8 @@ Trained 5000 steps on `bench`, seed 0, wandb online:
 uv run python train.py model=minimal_latent loss=full
 ```
 
+Exact resolved config (concrete, no overrides to reapply): [`config.yaml`](config.yaml).
+
 Config delta from [Exp 2](../2-delta/): `model=minimal_latent` swaps the PixelDecoder for a **LatentHead** that predicts the EMA-teacher's latent encoding of `I_{t+1}` (teacher momentum 0.99); the residual-pixel head is gone. `loss=full` kept.
 
 ## Hypothesis

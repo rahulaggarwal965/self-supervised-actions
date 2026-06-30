@@ -10,6 +10,8 @@ Trained 5000 steps on `bench`, seed 0, wandb online:
 uv run python train.py loss=full
 ```
 
+Exact resolved config (concrete, no overrides to reapply): [`config.yaml`](config.yaml).
+
 Config delta from [baseline](../0-baseline/): `loss=full` adds two terms — **margin** (no-action counterfactual, m=0.002, weight 1.0) and **usage** (codebook entropy, sample+batch, weight 0.1) — on top of prediction + vq. Same `model=minimal` (PixelDecoder), `data=toy`.
 
 ## Hypothesis

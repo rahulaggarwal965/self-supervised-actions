@@ -10,6 +10,8 @@ Trained 5000 steps on `bench`, seed 0, wandb online:
 uv run python train.py model=minimal_latent loss=vicreg +model.inverse.delta_input=true
 ```
 
+Exact resolved config (concrete, no overrides to reapply): [`config.yaml`](config.yaml).
+
 Config delta from [Exp 4](../4-vicreg/): `+model.inverse.delta_input=true` makes the inverse model take only the latent change — the code is a function of `Δz = z_{t+1} − z_t` instead of `concat(z_t, z_{t+1})`, removing absolute-state information from the code's input.
 
 ## Hypothesis

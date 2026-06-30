@@ -10,6 +10,8 @@ Trained 5000 steps on `bench`, seed 0, wandb online:
 uv run python train.py loss=full +model.head.delta=true
 ```
 
+Exact resolved config (concrete, no overrides to reapply): [`config.yaml`](config.yaml).
+
 Config delta from [Exp 1](../1-full-losses/): `+model.head.delta=true` switches the PixelDecoder to **residual** mode — it predicts `I_{t+1} − I_t` (tanh output), and the target becomes the frame delta. Same `loss=full`, `model=minimal`.
 
 ## Hypothesis

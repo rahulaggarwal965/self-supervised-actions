@@ -10,6 +10,8 @@ Trained 5000 steps on `bench`, seed 0, wandb online. Pure defaults:
 uv run python train.py
 ```
 
+Exact resolved config (concrete, no overrides to reapply): [`config.yaml`](config.yaml).
+
 Config delta from defaults: none. `model=minimal` (encoder → inverse → VQ(16) → dynamics → **PixelDecoder**), `loss=baseline` (prediction + vq, β=0.25), `data=toy` (64², agent step 6, 2 distractors, 8192/1024 train/val), `train=default`. All groups are version-controlled under `config/`. Metrics/figures here were regenerated from the checkpoint on the held-out val set (seed+1).
 
 ## Hypothesis

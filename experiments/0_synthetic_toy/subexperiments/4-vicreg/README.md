@@ -10,6 +10,8 @@ Trained 5000 steps on `bench`, seed 0, wandb online:
 uv run python train.py model=minimal_latent loss=vicreg
 ```
 
+Exact resolved config (concrete, no overrides to reapply): [`config.yaml`](config.yaml).
+
 Config delta from [Exp 3](../3-latent/): `loss=vicreg` adds a **VICRegLoss** on the encoder embedding (var_weight 25, cov_weight 1, γ 1) — a variance hinge that keeps each dimension's std near 1 plus covariance decorrelation — on top of full losses + the latent head.
 
 ## Hypothesis

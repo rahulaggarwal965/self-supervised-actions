@@ -11,6 +11,8 @@ uv run python train.py model=minimal_latent loss=vicreg \
     +model.inverse.delta_input=true '+data.env.start=[29,29]'
 ```
 
+Exact resolved config (concrete, no overrides to reapply): [`config.yaml`](config.yaml).
+
 Config delta from [Exp 5](../5-delta-code/): `+data.env.start=[29,29]` pins the agent's spawn to a fixed cell every sample (distractors kept, so the VICReg variance term stays well-posed). Position is now constant — the only thing varying across a transition is the action. The [decoder probe](../../../../src/ssa/eval/decoder_probe.py) logs `counterfactual/decoded` after fit (`train.probe_steps`).
 
 ## Hypothesis

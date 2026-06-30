@@ -17,3 +17,12 @@ def test_encoder_exposes_spatial_features():
     assert enc.feat_ch == 256
     # forward is unchanged and equals project(features(x))
     assert torch.allclose(enc(x), enc.project(f))
+
+
+def test_encoder_features_at_intermediate_level():
+    enc = Encoder(dim=32)
+    x = torch.randn(2, 3, 64, 64)
+    # level=2: after two stride-2 blocks (widths 32, 64) -> 64ch, 16x16 (finer)
+    assert enc.features(x, level=2).shape == (2, 64, 16, 16)
+    # default (level=None) is the final coarse map, unchanged
+    assert enc.features(x).shape == (2, enc.feat_ch, 4, 4)

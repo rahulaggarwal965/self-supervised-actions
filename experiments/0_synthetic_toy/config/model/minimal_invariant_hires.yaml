@@ -1,0 +1,28 @@
+# Higher-resolution position-invariant variant: like minimal_invariant, but the
+# InvariantInverseModel reads a finer encoder feature map (level=2 -> 64ch, 16x16)
+# instead of the final 4x4 map, so the agent's ~6px move is resolvable rather than
+# sub-cell. feat_ch must match the channel count at that level (64).
+# Select with `model=minimal_invariant_hires`.
+dim: 256
+action_dim: 64
+num_codes: 16
+teacher_momentum: 0.99
+encoder:
+  _target_: ssa.models.encoder.Encoder
+  in_ch: 3
+  dim: ${model.dim}
+inverse:
+  _target_: ssa.models.inverse.InvariantInverseModel
+  feat_ch: 64
+  feat_level: 2
+  action_dim: ${model.action_dim}
+quantizer:
+  _target_: ssa.models.quantizer.VectorQuantizer
+  num_codes: ${model.num_codes}
+  dim: ${model.action_dim}
+dynamics:
+  _target_: ssa.models.dynamics.Dynamics
+  dim: ${model.dim}
+  action_dim: ${model.action_dim}
+head:
+  _target_: ssa.models.heads.LatentHead

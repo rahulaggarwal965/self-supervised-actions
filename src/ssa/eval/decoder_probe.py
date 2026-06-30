@@ -55,3 +55,30 @@ def decoded_counterfactual_figure(model, decoder: PixelDecoder, obs) -> Figure:
         row[i + 1].axis("off")
     fig.tight_layout()
     return fig
+
+
+@torch.no_grad()
+def decoded_action_delta_figure(model, decoder: PixelDecoder, obs, gain: float = 8.0) -> Figure:
+    """Per-code action *effect*, amplified: ``D(dynamics(z_t, code_k)) -
+    D(dynamics(z_t, 0))`` scaled by ``gain`` and centered at gray. The plain
+    counterfactual is dominated by the (correctly predicted) static scene, so the
+    action's small latent footprint is invisible; this subtracts the no-op
+    prediction to isolate what each code *changes*. ``obs``: ``(T, C, H, W)``."""
+    device = next(model.parameters()).device
+    z = model.encoder(obs[-1:].to(device))
+    codebook = model.quantizer.codebook.weight
+    k = codebook.shape[0]
+    base = decoder.predict(model.dynamics(z, codebook.new_zeros(1, codebook.shape[1])))[0]
+    fig, axes = plt.subplots(1, k + 1, figsize=(2 * (k + 1), 2), squeeze=False)
+    row = axes[0]
+    row[0].imshow(obs[-1].detach().cpu().permute(1, 2, 0).clamp(0, 1).numpy())
+    row[0].set_title("I_t")
+    row[0].axis("off")
+    for i in range(k):
+        img = decoder.predict(model.dynamics(z, codebook[i : i + 1]))[0]
+        delta = ((img - base) * gain + 0.5).detach().cpu().permute(1, 2, 0).clamp(0, 1).numpy()
+        row[i + 1].imshow(delta)
+        row[i + 1].set_title(f"code {i}")
+        row[i + 1].axis("off")
+    fig.tight_layout()
+    return fig

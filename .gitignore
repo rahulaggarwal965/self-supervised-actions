@@ -7,3 +7,4 @@ wandb/
 outputs/
 multirun/
 *.pt
+.envrc

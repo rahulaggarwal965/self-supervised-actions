@@ -1,0 +1,32 @@
+# Latent-prediction anti-collapse: full losses (prediction + vq + margin + usage)
+# plus VICReg variance/covariance regularization on the encoder embedding, so the
+# representation cannot collapse to a constant. Intended with `model=minimal_latent`.
+# Select with `loss=vicreg`.
+terms:
+  - name: prediction
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.prediction.PredictionLoss
+  - name: vq
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.vq.VQLoss
+      beta: 0.25
+  - name: margin
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.margin.MarginLoss
+      m: 0.002
+  - name: usage
+    weight: 0.1
+    fn:
+      _target_: ssa.losses.usage.UsageLoss
+      sample_weight: 1.0
+      batch_weight: 1.0
+  - name: vicreg
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.vicreg.VICRegLoss
+      var_weight: 25.0
+      cov_weight: 1.0
+      gamma: 1.0

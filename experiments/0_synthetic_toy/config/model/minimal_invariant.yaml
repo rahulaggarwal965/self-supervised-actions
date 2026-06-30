@@ -1,0 +1,27 @@
+# Position-invariant variant: same V-JEPA latent setup as minimal_latent, but the
+# action is inferred by InvariantInverseModel from the inter-frame feature-map
+# difference (conv + global average pool), so the code is invariant to the agent's
+# absolute position. feat_ch must match the encoder's last conv width (256).
+# Select with `model=minimal_invariant`.
+dim: 256
+action_dim: 64
+num_codes: 16
+teacher_momentum: 0.99
+encoder:
+  _target_: ssa.models.encoder.Encoder
+  in_ch: 3
+  dim: ${model.dim}
+inverse:
+  _target_: ssa.models.inverse.InvariantInverseModel
+  feat_ch: 256
+  action_dim: ${model.action_dim}
+quantizer:
+  _target_: ssa.models.quantizer.VectorQuantizer
+  num_codes: ${model.num_codes}
+  dim: ${model.action_dim}
+dynamics:
+  _target_: ssa.models.dynamics.Dynamics
+  dim: ${model.dim}
+  action_dim: ${model.action_dim}
+head:
+  _target_: ssa.models.heads.LatentHead

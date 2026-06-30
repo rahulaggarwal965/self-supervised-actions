@@ -53,7 +53,13 @@ class ToyActionEnv:
 class ToyDataset(Dataset):
     """Pre-generates ``size`` transitions deterministically from a seed."""
 
-    def __init__(self, size=4096, seed=0, **env_kwargs):
+    def __init__(self, size=4096, seed=0, env_cfg=None, **env_kwargs):
+        # ``size`` is the number of transitions to generate. Environment settings
+        # may be passed either as loose keyword args (``**env_kwargs``) or as a
+        # single ``env_cfg`` mapping; the latter avoids a keyword collision when
+        # the env's own grid side length (also called ``size``) must be configured.
+        if env_cfg:
+            env_kwargs = {**env_cfg, **env_kwargs}
         env = ToyActionEnv(seed=seed, **env_kwargs)
         obs, nxt, act = [], [], []
         for _ in range(size):

@@ -11,5 +11,7 @@ def counterfactual_grid(model, obs):
     device = next(model.parameters()).device
     z = model.encoder(obs[-1:].to(device))  # (1, dim)
     codebook = model.quantizer.codebook.weight  # (K, action_dim)
-    preds = [model.head.predict(model.dynamics(z, codebook[k : k + 1])) for k in range(len(codebook))]
+    preds = [
+        model.head.predict(model.dynamics(z, codebook[k : k + 1])) for k in range(len(codebook))
+    ]
     return torch.cat(preds, dim=0)

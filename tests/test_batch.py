@@ -21,7 +21,12 @@ def test_collate_stacks_samples():
 
 def test_to_moves_tensors():
     batch = transition_collate(
-        [{"obs": torch.rand(1, 3, 64, 64), "next_obs": torch.rand(3, 64, 64),
-          "action": torch.tensor(0)}]
+        [
+            {
+                "obs": torch.rand(1, 3, 64, 64),
+                "next_obs": torch.rand(3, 64, 64),
+                "action": torch.tensor(0),
+            }
+        ]
     )
     assert batch.to("cpu").obs.device.type == "cpu"

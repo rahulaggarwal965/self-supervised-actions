@@ -76,6 +76,6 @@ def test_fit_runs_loop_with_eval_logging_and_restores_train_mode():
     )
     trainer.fit(loader, max_steps=6, eval_every=2, eval_fn=eval_fn, log_every=2)
 
-    assert calls["n"] == 2          # eval runs at steps 2 and 4 (guarded step > 0)
-    assert model.training is True   # train mode restored after eval toggling
-    assert 0 in logger.steps        # training metrics logged (log_every=2 hits step 0)
+    assert calls["n"] == 2  # eval runs at steps 2 and 4 (guarded step > 0)
+    assert model.training is True  # train mode restored after eval toggling
+    assert 0 in logger.steps  # training metrics logged (log_every=2 hits step 0)

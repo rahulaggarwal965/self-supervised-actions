@@ -15,6 +15,7 @@ Procedural sprite toy (one red agent moving L/R/U/D + static distractors), K=16,
 | 6 | [fixed-start **control**](6-fixed-start/) | pin agent position | **action discovered** once position decoupled | **0.618** |
 | 7 | [+invariant inverse](7-invariant/) | action from feature-diff + global avg pool | translation-invariant *head* insufficient — codes still track position | 0.027 |
 | 8 | [+higher-res features](8-invariant-hires/) | read action from 16×16 (not 4×4) map | **resolution was a real obstacle** — NMI ~13×, position NMI drops | **0.364** |
+| 9 | [+bundle](9-bundle/) | K↓ (16→6) + 2.5% action supervision + decorrelate-from-position | **action discovered (semi-supervised)** — position NMI →0.012 | **0.942** |
 
 (Exp 7 sanity: the same invariant model on the fixed-start setting reaches NMI **0.648** ≥ the control — the inverse is sound; the random-position gap is unchanged because the *encoder*, not just the head, carries position. Exp 8: at 16×16 the agent's 6-px move is resolvable; NMI(code,position) finally drops 0.067→0.044 while NMI(code,action) rises 0.027→0.364 — partial success, still < the 0.5 bar.)
 
@@ -86,15 +87,16 @@ The lesson: **invariance in the action head ≠ position-invariance in practice.
 
 [Exp 8](8-invariant-hires/) acted on the sub-cell half of that diagnosis: read the action from a **16×16** map instead of 4×4. This **worked, partially** — `NMI(code, action)` jumped 0.027 → **0.364** (~13×) and, for the first time, `NMI(code, position)` **dropped** (0.067 → 0.044). Resolution was a genuine obstacle. But pooling caps out below the 0.5 bar: global-average-pool discards the spatial *peak* that encodes the displacement, and the strided CNN remains only approximately shift-equivariant.
 
+[Exp 9](9-bundle/) then combined three of the review's levers on the hires base — **codebook K=16→6, ~2.5% action supervision, and a decorrelate-code-from-position term**. This **met the Stage-0 target**: `NMI(code, action)` **0.942**, ARI **0.915**, with `NMI(code, position)` collapsed to **0.012** and a near-diagonal confusion matrix. The random-position toy is solved for *action discovery* — past both the >0.8 target and the 0.62 control.
+
 ## Where this leaves us
 
-The recipe **works once position is decoupled** (control: NMI 0.62); on the random-position toy, higher-resolution action features get us a third of the way (NMI 0.36) and confirm the resolution + position-entanglement diagnosis. A `research/` literature review surveys the approaches; the ranked next moves (cheapest first):
+Stage-0 is **met** on the random-position toy (NMI 0.94), but with two honest caveats and one open thread:
 
-1. **Anti-aliased downsampling** (BlurPool / APS) so the feature-difference is a clean translated delta — directly attacks the residual aliasing Exp 8 leaves on the table.
-2. **Explicit displacement readout** — soft-argmax cross-correlation / phase correlation between the two feature maps → a continuous, sub-pixel (Δx, Δy) that is translation-equivariant *by construction*; quantize that. The literature's predicted ceiling-raiser over pooling.
-3. **Near-free objective/bottleneck levers** — shrink the codebook (K=16 → ~6, à la Genie), a **selectivity / decorrelate-code-from-position** loss (reuses our VICReg covariance machinery), or ~2.5% **action supervision** (free in our synthetic toy; LAOM reports +4.2×).
-4. **Object-centric / agent-slot encoder** (C-SWM-style additive `z+Δz`, or slots → pick-agent-slot) — the principled, heavier build; position-invariance enforced by the encoder.
+- **Semi-supervised, combined intervention.** Exp 9 uses 2.5% action labels (free in this synthetic toy; pure-SSL peaked at Exp 8's 0.36) and changes three things at once. **Next: ablate** (supervision-only / decorrelation-only / K↓-only / pure-SSL = K↓+decorrelation, *no labels*) to attribute the gain and see how far label-free reaches.
+- **The dynamics still under-uses the action.** NMI measures the inverse model's code↔action alignment (now clean); the *forward model's* no-action gap stays small (3.8e-3) and the decoded counterfactual moves only subtly per code. The supervision fixed *identifying* the action, not *using* it in prediction.
+- **Strengthen the forward model:** contrastive next-latent prediction (C-SWM) or an explicit soft-argmax displacement readout, so the dynamics *needs* the code (raising the gap + counterfactual fidelity). The other surveyed routes (anti-aliased downsampling, object-centric encoder) remain for harder stages.
 
-See [`research/`](../../../research/) for the surveyed evidence behind each.
+See [`research/`](../../../research/) for the surveyed evidence behind each lever.
 
-Verdict vs. Stage-0 (NMI > 0.8): **not yet met; mechanism validated, position-invariance partially addressed.** The control proves the method discovers actions (0.62) when position is decoupled; Exp 7→8 show that resolution matters (0.027→0.36) but a pooled head caps out, pointing to an explicit displacement readout or an object-centric encoder next.
+Verdict vs. Stage-0 (NMI > 0.8): **met (semi-supervised).** The arc: mechanism validated under a position control (Exp 6, 0.62) → resolution shown to matter (Exp 8, 0.36) → action discovered on the general random-position toy with a small-codebook + 2.5%-supervision + decorrelation bundle (Exp 9, **0.94**). Remaining work is attribution (ablation), closing the label-free gap, and making the dynamics genuinely action-conditional.

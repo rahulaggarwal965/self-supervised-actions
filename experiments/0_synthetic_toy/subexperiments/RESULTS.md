@@ -13,6 +13,9 @@ Procedural sprite toy (one red agent moving L/R/U/D + static distractors), K=16,
 | 4 | [+VICReg](4-vicreg/) | variance/covariance anti-collapse | mechanism healthy; obstacle now semantic | 0.011 |
 | 5 | [+delta-code](5-delta-code/) | code from Δz only | codes encode **position**, not action (confirmed) | 0.013 |
 | 6 | [fixed-start **control**](6-fixed-start/) | pin agent position | **action discovered** once position decoupled | **0.618** |
+| 7 | [+invariant inverse](7-invariant/) | action from feature-diff + global avg pool | translation-invariant *head* insufficient — codes still track position | 0.027 |
+
+(Exp 7 sanity: the same invariant model on the fixed-start setting reaches NMI **0.648** ≥ the control — the inverse is sound; the random-position gap is unchanged because the *encoder*, not just the head, carries position.)
 
 ## Headline
 
@@ -74,12 +77,18 @@ Latent-head runs have no decoder, so "what does each code *do*?" is invisible in
 
 From a single `I_t`, each of the 16 codes decodes to a distinct predicted next position of the red agent (reconstructions are soft — a 500-step probe on frozen latents — but the displacement direction is clearly code-dependent, with the ~4-codes-per-action grouping visible). This is the NMI 0.62 result rendered in pixels: the codes carry the action. (Logged live to wandb as `counterfactual/decoded` for every latent run.)
 
+## Attempt at position-invariance (Exp 7) — head alone is not enough
+
+The natural fix is to make action inference position-invariant. [Exp 7](7-invariant/) infers the action from the inter-frame **feature-map difference** through a global average pool, which is translation-invariant *by construction* (unit-tested exactly). It **did not** close the gap: on the random-position toy `NMI(code, action)` rose only 0.013 → 0.027, and `NMI(code, position)` stayed at **0.067 ≈ 0.064** — the codes still track position. The fixed-start sanity run reached NMI 0.65 (≥ control), so the inverse is sound.
+
+The lesson: **invariance in the action head ≠ position-invariance in practice.** The pool is invariant to *clean spatial shifts of the feature map*, but the agent at different absolute positions does not produce shifted-copy feature maps in a generic 4×4-downsampled CNN, and the 6-px move is *sub-feature-cell*. Position lives in the **encoder**, so it must be fixed there.
+
 ## Where this leaves us
 
-The full recipe **works** — latent prediction + VICReg + a delta-conditioned VQ code discovers the actions (NMI 0.62, ARI 0.39, large no-action gap) **once position is decoupled**. The only thing standing between the control and the general (random-position) toy is **position-invariance**: in a generic CNN latent, the change `Δz` from "move left" depends on where the agent is, so the code spends its capacity on position. To close the gap on the random-position toy:
+The full recipe **works once position is decoupled** (control: NMI 0.62, ARI 0.39, large gap); the obstacle on the random-position toy is encoder-level position entanglement, and a translation-invariant *head* (Exp 7) is insufficient. Next, in order of expected leverage:
 
-1. **Position-invariant / object-centric encoder** so "moved left" looks the same everywhere — turns the general toy into the (already-working) control. The principled next build.
-2. **Sweep toward NMI > 0.8 in the control** (K, VICReg/margin weights, longer training) — the control sits at 0.62; some of the gap is residual distractor entanglement and ~4-codes-per-action, both tunable.
-3. **Contrastive action loss** on `Δz` — complementary once the encoder is position-invariant.
+1. **Higher-resolution action features** — infer the action from an earlier, finer encoder map (e.g. 16×16) so the 6-px move is resolvable. Cheapest next experiment, directly motivated by Exp 7's sub-cell diagnosis.
+2. **Object-centric / slot encoder** — factor the scene into object slots with explicit positions; the action is the *relative* change of the agent slot. Position-invariance enforced by the encoder, not just the pool. The principled build.
+3. **Sweep toward NMI > 0.8 in the control** (K, VICReg/margin weights, longer training) — the control sits at 0.62; some gap is residual distractor entanglement and ~4-codes-per-action, both tunable.
 
-Verdict vs. Stage-0 (NMI > 0.8): **not yet met, but the mechanism is validated.** The positive control shows the method discovers actions (NMI 0.62) when position is decoupled; the random-position failure is fully explained by — and isolated to — position-entanglement in the encoder. The clear next step is a position-invariant encoder, which should lift the general case toward the control.
+Verdict vs. Stage-0 (NMI > 0.8): **not yet met; mechanism validated, position-invariance still open.** The control proves the method discovers actions (NMI 0.62) when position is decoupled; Exp 7 shows a translation-invariant action head does not transfer that to the random-position toy, sharpening the next step to a position-invariant *encoder* (finer action features or object-centric slots).

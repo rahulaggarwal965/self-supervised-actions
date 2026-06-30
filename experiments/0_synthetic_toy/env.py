@@ -10,12 +10,15 @@ class ToyActionEnv:
     one of four directions (the hidden action); optional static distractor
     squares never move. Renders to ``(3, size, size)`` float frames in [0,1]."""
 
-    def __init__(self, size=64, agent=6, step=6, n_distractors=2, history=1, seed=0):
+    def __init__(self, size=64, agent=6, step=6, n_distractors=2, history=1, seed=0, start=None):
         self.size = size
         self.agent = agent
         self.step = step
         self.n_distractors = n_distractors
         self.history = history
+        # start: fixed agent (x, y) for every sample (decouples position from the
+        # action); None = random spawn. A control for action discovery.
+        self.start = None if start is None else np.array(start, dtype=int)
         self.rng = np.random.default_rng(seed)
         self.actions = np.array([(-step, 0), (step, 0), (0, -step), (0, step)], dtype=int)
 
@@ -34,7 +37,7 @@ class ToyActionEnv:
 
     def sample(self):
         lo, hi = self.step, self.size - self.agent - self.step
-        pos = self.rng.integers(lo, hi, size=2)
+        pos = self.start.copy() if self.start is not None else self.rng.integers(lo, hi, size=2)
         distractors = [
             (
                 tuple(int(v) for v in self.rng.integers(0, self.size - 5, size=2)),

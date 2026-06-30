@@ -26,11 +26,20 @@ def _up(cin: int, cout: int) -> nn.Sequential:
 
 
 class PixelDecoder(PredictionHead):
-    """Decodes a feature vector to a ``(C, H, W)`` image; target is the next frame."""
+    """Decodes a feature vector to a ``(C, H, W)`` image.
 
-    def __init__(self, dim: int = 256, out_ch: int = 3, base: int = 256) -> None:
+    With ``delta=False`` (default) it predicts the next frame directly (sigmoid,
+    target = ``I_{t+1}``). With ``delta=True`` it predicts the residual
+    ``I_{t+1} - I_t`` (tanh, since the delta lives in [-1, 1]); this forces the
+    action to explain the change rather than the static scene.
+    """
+
+    def __init__(
+        self, dim: int = 256, out_ch: int = 3, base: int = 256, delta: bool = False
+    ) -> None:
         super().__init__()
         self.base = base
+        self.delta = delta
         self.fc = nn.Linear(dim, base * 4 * 4)
         self.net = nn.Sequential(_up(base, 128), _up(128, 64), _up(64, 32), _up(32, 32))
         self.out = nn.Conv2d(32, out_ch, 3, padding=1)
@@ -38,9 +47,12 @@ class PixelDecoder(PredictionHead):
     def predict(self, feat: Tensor) -> Tensor:
         h = self.fc(feat).view(-1, self.base, 4, 4)
         h = self.net(h)  # 4 -> 8 -> 16 -> 32 -> 64
-        return self.out(h).sigmoid()
+        out = self.out(h)
+        return out.tanh() if self.delta else out.sigmoid()
 
     def target(self, batch, model) -> Tensor:
+        if self.delta:
+            return batch.next_obs - batch.obs[:, -1]
         return batch.next_obs
 
 

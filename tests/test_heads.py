@@ -21,6 +21,17 @@ def test_pixel_decoder_predicts_image_and_targets_next_frame():
     assert torch.equal(head.target(batch, model=None), batch.next_obs)
 
 
+def test_pixel_decoder_delta_predicts_residual_and_targets_frame_difference():
+    head = PixelDecoder(dim=32, delta=True)
+    img = head.predict(torch.randn(2, 32))
+    assert img.shape == (2, 3, 64, 64)
+    # tanh residual lives in [-1, 1] (and can be negative, unlike the sigmoid path)
+    assert float(img.min()) >= -1.0 and float(img.max()) <= 1.0
+    batch = SimpleNamespace(obs=torch.rand(2, 1, 3, 64, 64), next_obs=torch.rand(2, 3, 64, 64))
+    target = head.target(batch, model=None)
+    assert torch.equal(target, batch.next_obs - batch.obs[:, -1])
+
+
 def test_latent_head_targets_teacher_encoding():
     class FakeModel:
         teacher = Encoder(in_ch=3, dim=16)

@@ -1,56 +1,54 @@
-# Results — Stage-0 Synthetic Toy: baseline (prediction + VQ)
+# Results — Stage-0 Synthetic Toy
 
-**Run:** 5000 steps, default config (`model/minimal` K=16, `loss/baseline` = pixel-prediction + VQ only), on `bench` (alpa12 gpu1), logged live to wandb.
-**wandb:** https://wandb.ai/rva_nsr/ssa/runs/jzj52ot1 (project `ssa`).
-**Checkpoint:** `model.pt` (fetched). Figures/metrics below regenerated from it on the held-out val set (seed+1).
+Two runs on the procedural sprite toy (one red agent moving L/R/U/D + static distractors), 5000 steps each, default `model/minimal` (K=16), on `bench` (alpa12 gpu1), logged live to wandb (project `ssa`). Figures/metrics below are regenerated from each fetched checkpoint on the held-out val set (seed+1).
+
+| Run | wandb | loss |
+|---|---|---|
+| Baseline | [jzj52ot1](https://wandb.ai/rva_nsr/ssa/runs/jzj52ot1) | prediction + VQ |
+| + margin + usage | [1saxa1eg](https://wandb.ai/rva_nsr/ssa/runs/1saxa1eg) | + no-action margin (m=0.002) + usage entropy (w=0.1) |
 
 ## Headline
 
-The bare prediction + VQ baseline **does not discover actions**. The codebook collapses to a single code, the codes carry no information about the true action, and the model predicts the next frame just as well *without* the action as with it. This is exactly the failure mode the project's hypothesis anticipated, and it motivates the anti-collapse losses (next cycle).
+| Metric (val) | Baseline | + margin + usage | Target |
+|---|---|---|---|
+| codes used / perplexity | 1 / **1.00** | 7 / **5.60** | non-collapsed |
+| no-action gap | 3.2e-6 | **2.1e-4** | clearly > 0 |
+| NMI(code, true action) | 0.00 | **0.003** | > 0.8 |
+| ARI(code, true action) | 0.00 | −0.001 | high |
+| val pixel MSE | 0.0083 | 0.0096 | — |
 
-## Metrics (held-out val)
+**The anti-collapse losses do their jobs, but the codes still are not the actions.** Usage broke the codebook collapse (1→7 codes) and the margin made the action weakly necessary (gap went positive, ~65×), but the discovered codes carry no information about the true L/R/U/D action (NMI ~0, far from the 0.8 target). Partial mechanism win; semantic action discovery **not** achieved on this toy as configured.
 
-| Metric | Value | Reading |
-|---|---|---|
-| NMI(code, true action) | **0.00** | codes carry no action information |
-| ARI(code, true action) | **0.00** | same |
-| Codebook perplexity | **1.00** (**1 / 16** codes used) | full codebook collapse |
-| No-action gap | **3.2e-6** (err w/ action 0.008658 vs w/o 0.008661) | the action is ignored |
-| Val pixel MSE | 0.0083 | next-frame prediction is "good" — *without needing the action* |
+## Baseline (prediction + VQ): total failure — as predicted
 
-Success target was NMI > 0.8 and a clear no-action gap; the baseline misses both by design — that is the point of running it.
+One code carries every assignment (perplexity 1.0), and applying any of the 16 codes to a fixed frame yields identical predictions — the action is ignored.
 
-## Evidence
+![baseline codebook usage](codebook_usage.png)
+![baseline counterfactual](counterfactual.png)
 
-**Codebook collapse** — one code carries all assignments (perplexity 1.0):
+The toy's future is largely predictable without the action (`I_{t+1} ≈ I_t`; a blurry near-static prediction already gets low MSE), so the dynamics has no pressure to use `a_t`, and nothing stops VQ collapse.
 
-![codebook usage](codebook_usage.png)
+## + margin + usage: collapse broken, action weakly necessary, but no semantic alignment
 
-**The action is ignored** — applying every one of the 16 codebook entries to a fixed frame `I_t` yields near-identical predictions (no code produces a distinct transition):
+- **Collapse broken** — 7 of 16 codes now used (perplexity 5.6). The usage loss works.
+- **Action weakly necessary** — no-action gap is positive (0.00021): predicting with the inferred action beats the zero-action prediction, where the baseline showed no difference. The margin loss works directionally, but the margin it can extract is tiny.
+- **No action alignment** — NMI ≈ 0. The confusion matrix shows the used codes (dominated by codes 12–13) spread roughly **uniformly across all four actions** — no code is action-selective:
 
-![counterfactual grid](counterfactual.png)
-
-**No code↔action alignment** — all mass sits in a single code row, spread across the true actions:
-
-![code-action confusion](code_action_confusion.png)
-
-**Predictions are near-static** — the model reconstructs roughly the current frame as a blurry blob rather than the agent's directional move (predicting "no change" already gets low pixel MSE):
-
-![reconstruction](reconstruction.png)
+![ablation code-action confusion](full_losses/code_action_confusion.png)
+![ablation codebook usage](full_losses/codebook_usage.png)
 
 ## Interpretation
 
-Two reinforcing shortcuts explain the failure:
+Usage and margin are necessary but not sufficient here. Two things keep the codes from capturing the action:
 
-1. **The future is largely predictable without the action.** On this toy, `I_{t+1}` is mostly `I_t` (the agent moves one small step; the background and distractors are static). A decoder that predicts ≈`I_t` already attains low pixel MSE, so the dynamics model has little pressure to use the action — hence the ~0 no-action gap.
-2. **Nothing prevents VQ collapse.** With only the commitment/codebook loss, the encoder can drive all inputs to one code; that minimizes VQ loss without the codes meaning anything. Perplexity 1.0 confirms it.
+1. **Weak action leverage.** Because `I_{t+1} ≈ I_t` on this toy, the action's marginal contribution to pixel MSE is tiny (the gap tops out at ~2e-4), so there is little gradient pressure for the codes to become action-selective rather than encoding scene/position. The inverse model `f(z_t, z_{t+1})` can route appearance information into the code instead of the controllable change.
+2. **No pressure toward "change, not appearance."** Nothing yet forces `a_t` to describe the *delta* rather than the frame.
 
-So `a_t` is neither *necessary* (the future is predictable without it) nor *used* (the codebook collapsed). Both are unaddressed by the baseline loss.
+This matches the design doc's warnings, and points the next iterations at making `a_t` capture controllable change:
 
-## Next step
+- **Predict the delta** (`ẑ_{t+1} = z_t + g(c_t, a_t)` / pixel delta) so the action explains change, not the static scene.
+- **Raise the action's leverage** — a low-bandwidth context bottleneck `c_t = h(z_{t-k:t})`, and/or a harder future, so prediction genuinely needs `a_t`.
+- **Stronger / relative margin** and a **contrastive action loss** (similar deltas → similar codes) to push semantic structure.
+- Tune `m` and the usage weight; sweep K and history length.
 
-Turn on the two anti-collapse pressures (a `loss/full.yaml` ablation) and re-run:
-- **No-action margin loss** — force prediction-with-action to beat prediction-with-zero-action by a margin, making `a_t` necessary.
-- **Usage loss** — low per-sample code entropy + high batch-level entropy, breaking the collapse.
-
-Expected on the next run: codebook perplexity rises well above 1, the no-action gap becomes clearly positive, and NMI(code, true action) climbs toward the 0.8 target. The dashboard (this run's wandb panels) is set up to show that contrast directly.
+Verdict vs. the Stage-0 success criterion (NMI > 0.8 + clear no-action gap): **not met yet** — the mechanism is half-working (anti-collapse + necessity), and the codes need change-focused structure before they become semantic. That is the next cycle.

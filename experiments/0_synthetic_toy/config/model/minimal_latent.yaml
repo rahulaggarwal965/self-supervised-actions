@@ -1,0 +1,25 @@
+# V-JEPA-style variant: predict the EMA-teacher's latent encoding of I_{t+1}
+# (LatentHead) instead of pixels, to avoid the MSE-blur that lets the action be
+# ignored under pixel/delta prediction. Select with `model=minimal_latent`.
+dim: 256
+action_dim: 64
+num_codes: 16
+teacher_momentum: 0.99
+encoder:
+  _target_: ssa.models.encoder.Encoder
+  in_ch: 3
+  dim: ${model.dim}
+inverse:
+  _target_: ssa.models.inverse.InverseModel
+  dim: ${model.dim}
+  action_dim: ${model.action_dim}
+quantizer:
+  _target_: ssa.models.quantizer.VectorQuantizer
+  num_codes: ${model.num_codes}
+  dim: ${model.action_dim}
+dynamics:
+  _target_: ssa.models.dynamics.Dynamics
+  dim: ${model.dim}
+  action_dim: ${model.action_dim}
+head:
+  _target_: ssa.models.heads.LatentHead

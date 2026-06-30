@@ -24,6 +24,7 @@ from ssa.eval.figures import (  # noqa: E402
 )
 from ssa.eval.metrics import no_action_gap  # noqa: E402
 from ssa.losses.base import LossTerm  # noqa: E402
+from ssa.models.heads import PixelDecoder  # noqa: E402
 from ssa.train.logging import NoopLogger, WandbLogger  # noqa: E402
 from ssa.train.trainer import Trainer  # noqa: E402
 from ssa.utils.seed import set_seed  # noqa: E402
@@ -76,11 +77,13 @@ def make_eval_fn(eval_loader, device, num_codes, viz_n=8):
             "val/noaction_gap": gap["gap"],
         }
         figures = {
-            "recon/panel": reconstruction_panel(model, vb, n=viz_n),
-            "counterfactual/grid": counterfactual_figure(model, vb.obs[0]),
             "codes/confusion": code_action_confusion(codes, labels, num_codes),
             "codes/usage": codebook_usage_bar(codes, num_codes),
         }
+        # reconstruction / counterfactual decode to images — pixel heads only
+        if isinstance(model.head, PixelDecoder):
+            figures["recon/panel"] = reconstruction_panel(model, vb, n=viz_n)
+            figures["counterfactual/grid"] = counterfactual_figure(model, vb.obs[0])
         return scalars, figures
 
     return eval_fn

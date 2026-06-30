@@ -16,6 +16,10 @@ from env import ToyDataset  # noqa: E402
 
 from ssa.data.batch import transition_collate  # noqa: E402
 from ssa.eval.clustering import nmi_ari  # noqa: E402
+from ssa.eval.decoder_probe import (  # noqa: E402
+    decoded_counterfactual_figure,
+    train_decoder_probe,
+)
 from ssa.eval.figures import (  # noqa: E402
     code_action_confusion,
     codebook_usage_bar,
@@ -24,7 +28,7 @@ from ssa.eval.figures import (  # noqa: E402
 )
 from ssa.eval.metrics import no_action_gap  # noqa: E402
 from ssa.losses.base import LossTerm  # noqa: E402
-from ssa.models.heads import PixelDecoder  # noqa: E402
+from ssa.models.heads import LatentHead, PixelDecoder  # noqa: E402
 from ssa.train.logging import NoopLogger, WandbLogger  # noqa: E402
 from ssa.train.trainer import Trainer  # noqa: E402
 from ssa.utils.seed import set_seed  # noqa: E402
@@ -130,6 +134,12 @@ def main(cfg):
         eval_fn=make_eval_fn(eval_loader, device, cfg.model.num_codes),
         log_every=cfg.train.log_every,
     )
+    # latent heads have no decoder of their own — train a post-hoc decoder probe
+    # to render the predicted next-latents back to pixels for a counterfactual.
+    if isinstance(model.head, LatentHead):
+        probe = train_decoder_probe(model, eval_loader, device, steps=cfg.train.probe_steps)
+        fig = decoded_counterfactual_figure(model, probe, eval_ds[0]["obs"])
+        logger.log_figures({"counterfactual/decoded": fig}, cfg.train.max_steps)
     trainer.save("model.pt")
     logger.finish()
 

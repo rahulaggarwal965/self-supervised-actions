@@ -32,6 +32,14 @@ def test_action_moves_agent_in_expected_direction():
             assert np.sign(nxt_y - cur_y) == np.sign(dy) or nxt_y == cur_y
 
 
+def test_fixed_start_keeps_agent_position_constant():
+    env = ToyActionEnv(seed=0, n_distractors=0, start=[20, 20])
+    centroids = [_red_centroid(env.sample()[0][-1]) for _ in range(10)]
+    xs = {cx for cx, _ in centroids}
+    ys = {cy for _, cy in centroids}
+    assert len(xs) == 1 and len(ys) == 1  # agent starts at the same spot every sample
+
+
 def _red_centroid(img):
     mask = (img[0] > 0.9) & (img[1] < 0.1) & (img[2] < 0.1)
     ys, xs = np.nonzero(mask)

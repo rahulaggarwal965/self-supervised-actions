@@ -1,0 +1,35 @@
+# Ablation: vicreg terms + partial action supervision ONLY (no decorrelation).
+# Isolates the contribution of the 2.5% action labels. Select with `loss=sup_only`.
+terms:
+  - name: prediction
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.prediction.PredictionLoss
+  - name: vq
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.vq.VQLoss
+      beta: 0.25
+  - name: margin
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.margin.MarginLoss
+      m: 0.002
+  - name: usage
+    weight: 0.1
+    fn:
+      _target_: ssa.losses.usage.UsageLoss
+      sample_weight: 1.0
+      batch_weight: 1.0
+  - name: vicreg
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.vicreg.VICRegLoss
+      var_weight: 25.0
+      cov_weight: 1.0
+      gamma: 1.0
+  - name: action_sup
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.supervision.ActionSupervisionLoss
+      label_frac: 0.025

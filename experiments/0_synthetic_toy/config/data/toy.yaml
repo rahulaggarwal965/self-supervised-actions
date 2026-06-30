@@ -1,0 +1,11 @@
+train_size: 8192
+eval_size: 1024
+seed: 0
+batch_size: 128
+num_workers: 4
+env:
+  size: 64
+  agent: 6
+  step: 6
+  n_distractors: 2
+  history: 1

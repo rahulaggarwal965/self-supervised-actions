@@ -1,0 +1,12 @@
+defaults:
+  - model: minimal
+  - data: toy
+  - loss: baseline
+  - train: default
+  - _self_
+
+seed: 0
+experiment: 0_synthetic_toy
+wandb:
+  project: ssa
+  mode: offline   # set to "online" when ready, or "disabled" to skip wandb

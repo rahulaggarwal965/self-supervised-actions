@@ -1,0 +1,23 @@
+dim: 256
+action_dim: 64
+num_codes: 16
+teacher_momentum: null
+encoder:
+  _target_: ssa.models.encoder.Encoder
+  in_ch: 3
+  dim: ${model.dim}
+inverse:
+  _target_: ssa.models.inverse.InverseModel
+  dim: ${model.dim}
+  action_dim: ${model.action_dim}
+quantizer:
+  _target_: ssa.models.quantizer.VectorQuantizer
+  num_codes: ${model.num_codes}
+  dim: ${model.action_dim}
+dynamics:
+  _target_: ssa.models.dynamics.Dynamics
+  dim: ${model.dim}
+  action_dim: ${model.action_dim}
+head:
+  _target_: ssa.models.heads.PixelDecoder
+  dim: ${model.dim}

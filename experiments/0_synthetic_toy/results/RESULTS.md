@@ -54,6 +54,14 @@ NMI jumped **~46×** (0.013 → 0.62), and the confusion matrix shows each code 
 
 **This confirms both the diagnosis and the method.** When position is decoupled from the action, the pipeline (latent prediction + VICReg anti-collapse + a delta-conditioned code) genuinely discovers the four actions. The failure on the random-position toy was the position confound, not a broken mechanism.
 
+### Seeing the actions in pixels (decoder probe)
+
+Latent-head runs have no decoder, so "what does each code *do*?" is invisible in pixel space. To make it visible without touching the trained model, I train a small post-hoc **decoder probe** `D(z) → pixels` on the *frozen* encoder (reconstructs next frames from their latents), then decode each code's predicted next-latent `D(dynamics(z_t, code_k))` into an actual frame. This is a faithful read-out of the learned dynamics, not a second model fit to the task.
+
+![fixed-start decoded counterfactual: each code moves the agent a distinct direction](fixedstart/decoded_counterfactual.png)
+
+From a single `I_t`, each of the 16 codes decodes to a distinct predicted next position of the red agent (reconstructions are soft — a 500-step probe on frozen latents — but the displacement direction is clearly code-dependent, with the ~4-codes-per-action grouping visible). This is the NMI 0.62 result rendered in pixels: the codes carry the action. (Logged live to wandb as `counterfactual/decoded` for every latent run.)
+
 ## Where this leaves us
 
 The full recipe **works** — latent prediction + VICReg + a delta-conditioned VQ code discovers the actions (NMI 0.62, ARI 0.39, large no-action gap) **once position is decoupled**. The only thing standing between the control and the general (random-position) toy is **position-invariance**: in a generic CNN latent, the change `Δz` from "move left" depends on where the agent is, so the code spends its capacity on position. To close the gap on the random-position toy:

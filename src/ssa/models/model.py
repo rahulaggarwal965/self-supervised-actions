@@ -45,9 +45,13 @@ class LatentActionModel(nn.Module):
             tp.mul_(m).add_(sp, alpha=1 - m)
 
     def forward(self, batch) -> ModelOutput:
-        z_ctx = self.encoder(batch.obs[:, -1])
-        z_tp1 = self.encoder(batch.next_obs)
-        a_pre = self.inverse(z_ctx, z_tp1)
+        f_ctx = self.encoder.features(batch.obs[:, -1])
+        z_ctx = self.encoder.project(f_ctx)
+        if getattr(self.inverse, "spatial", False):
+            # position-invariant: action from the inter-frame feature-map diff
+            a_pre = self.inverse(f_ctx, self.encoder.features(batch.next_obs))
+        else:
+            a_pre = self.inverse(z_ctx, self.encoder(batch.next_obs))
         a_q, vq = self.quantizer(a_pre)
         feat = self.dynamics(z_ctx, a_q)
         pred = self.head.predict(feat)

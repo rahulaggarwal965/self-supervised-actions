@@ -4,7 +4,7 @@ from ssa.data.batch import TransitionBatch
 from ssa.models.dynamics import Dynamics
 from ssa.models.encoder import Encoder
 from ssa.models.heads import LatentHead, PixelDecoder
-from ssa.models.inverse import InverseModel
+from ssa.models.inverse import InvariantInverseModel, InverseModel
 from ssa.models.model import LatentActionModel
 from ssa.models.quantizer import VectorQuantizer
 
@@ -56,3 +56,19 @@ def test_update_teacher_changes_teacher_toward_student():
 def test_teacher_params_are_frozen():
     model = _model(LatentHead())
     assert all(not p.requires_grad for p in model.teacher.parameters())
+
+
+def test_forward_invariant_inverse_runs():
+    enc = Encoder(dim=32)
+    model = LatentActionModel(
+        encoder=enc,
+        inverse=InvariantInverseModel(feat_ch=enc.feat_ch, action_dim=8),
+        quantizer=VectorQuantizer(num_codes=4, dim=8),
+        dynamics=Dynamics(dim=32, action_dim=8),
+        head=LatentHead(),
+        teacher_momentum=0.99,
+    )
+    out = model(_batch())
+    assert out.a_q.shape == (2, 8)
+    assert out.z_ctx.shape == (2, 32)
+    assert out.vq["codes"].shape == (2,)

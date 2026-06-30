@@ -1,21 +1,32 @@
-import pathlib
-import sys
+import matplotlib
 
-import hydra
-import torch
-from hydra.utils import instantiate
-from omegaconf import OmegaConf
-from torch.utils.data import DataLoader
+matplotlib.use("Agg")
+
+import pathlib  # noqa: E402
+import sys  # noqa: E402
+
+import hydra  # noqa: E402
+import torch  # noqa: E402
+from hydra.utils import instantiate  # noqa: E402
+from omegaconf import OmegaConf  # noqa: E402
+from torch.utils.data import DataLoader  # noqa: E402
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from env import ToyDataset  # noqa: E402
 
-from ssa.data.batch import transition_collate
-from ssa.eval.clustering import nmi_ari
-from ssa.losses.base import LossTerm
-from ssa.train.logging import NoopLogger, WandbLogger
-from ssa.train.trainer import Trainer
-from ssa.utils.seed import set_seed
+from ssa.data.batch import transition_collate  # noqa: E402
+from ssa.eval.clustering import nmi_ari  # noqa: E402
+from ssa.eval.figures import (  # noqa: E402
+    code_action_confusion,
+    codebook_usage_bar,
+    counterfactual_figure,
+    reconstruction_panel,
+)
+from ssa.eval.metrics import no_action_gap  # noqa: E402
+from ssa.losses.base import LossTerm  # noqa: E402
+from ssa.train.logging import NoopLogger, WandbLogger  # noqa: E402
+from ssa.train.trainer import Trainer  # noqa: E402
+from ssa.utils.seed import set_seed  # noqa: E402
 
 
 def build_model(cfg):
@@ -31,15 +42,46 @@ def build_model(cfg):
     )
 
 
-def make_eval_fn(eval_loader, device):
+def make_eval_fn(eval_loader, device, num_codes, viz_n=8):
+    import numpy as np
+
+    viz_batch = next(iter(eval_loader))  # fixed batch so figures are comparable across steps
+
     def eval_fn(model, step):
         codes, labels = [], []
+        mse_sum, count = 0.0, 0
         with torch.no_grad():
             for batch in eval_loader:
-                out = model(batch.to(device))
+                b = batch.to(device)
+                out = model(b)
                 codes += out.vq["codes"].tolist()
-                labels += batch.action.tolist()
-        return {f"eval/{k}": v for k, v in nmi_ari(codes, labels).items()}
+                labels += b.action.tolist()
+                mse_sum += torch.nn.functional.mse_loss(
+                    out.pred, out.target, reduction="sum"
+                ).item()
+                count += out.pred.numel()
+        cluster = nmi_ari(codes, labels)
+        counts = np.bincount(np.asarray(codes), minlength=num_codes).astype(float)
+        probs = counts / counts.sum()
+        perplexity = float(np.exp(-(probs * np.log(probs + 1e-10)).sum()))
+        vb = viz_batch.to(device)
+        gap = no_action_gap(model, vb)
+        scalars = {
+            "val/nmi": cluster["nmi"],
+            "val/ari": cluster["ari"],
+            "val/mse": mse_sum / count,
+            "val/perplexity": perplexity,
+            "val/action_err": gap["action_err"],
+            "val/noaction_err": gap["noaction_err"],
+            "val/noaction_gap": gap["gap"],
+        }
+        figures = {
+            "recon/panel": reconstruction_panel(model, vb, n=viz_n),
+            "counterfactual/grid": counterfactual_figure(model, vb.obs[0]),
+            "codes/confusion": code_action_confusion(codes, labels, num_codes),
+            "codes/usage": codebook_usage_bar(codes, num_codes),
+        }
+        return scalars, figures
 
     return eval_fn
 
@@ -82,7 +124,7 @@ def main(cfg):
         train_loader,
         max_steps=cfg.train.max_steps,
         eval_every=cfg.train.eval_every,
-        eval_fn=make_eval_fn(eval_loader, device),
+        eval_fn=make_eval_fn(eval_loader, device, cfg.model.num_codes),
         log_every=cfg.train.log_every,
     )
     trainer.save("model.pt")

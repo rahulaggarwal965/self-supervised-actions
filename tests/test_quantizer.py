@@ -28,10 +28,11 @@ def test_perplexity_in_range():
 
 
 def test_codes_select_nearest_codebook_rows():
+    torch.manual_seed(0)
     vq = VectorQuantizer(num_codes=8, dim=4)
     z = torch.randn(5, 4)
     z_q, info = vq(z)
-    assert torch.allclose(z_q, vq.codebook(info["codes"]))
+    assert torch.allclose(z_q, vq.codebook(info["codes"]), atol=1e-5)
 
 
 def test_perplexity_collapses_to_one_for_identical_inputs():

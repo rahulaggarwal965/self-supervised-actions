@@ -3,5 +3,8 @@ lr: 0.0003
 eval_every: 500
 log_every: 20
 grad_clip: 1.0
-probe_steps: 500
+# decoder-probe training steps for the latent->pixel counterfactual. 500 was too
+# few for random-position runs (recon stays washed out ~5e-3 MSE); the probe must
+# reconstruct the agent at arbitrary positions, which converges (~1e-5) by ~2.5k.
+probe_steps: 3000
 device: cuda

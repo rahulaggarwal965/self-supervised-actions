@@ -25,7 +25,8 @@ class Trainer:
         self.optimizer.zero_grad()
         total.backward()
         if self.grad_clip:
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
+            norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
+            logs["train/grad_norm"] = float(norm)
         self.optimizer.step()
         self.model.update_teacher()
         logs["loss/total"] = total.item()
@@ -41,9 +42,10 @@ class Trainer:
                     self.logger.log(logs, step)
                 if eval_fn and eval_every and step > 0 and step % eval_every == 0:
                     self.model.eval()
-                    metrics = eval_fn(self.model, step)
+                    scalars, figures = eval_fn(self.model, step)
                     if self.logger:
-                        self.logger.log(metrics, step)
+                        self.logger.log(scalars, step)
+                        self.logger.log_figures(figures, step)
                     self.model.train()
                 step += 1
                 if step >= max_steps:

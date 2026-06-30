@@ -54,14 +54,18 @@ def test_fit_runs_loop_with_eval_logging_and_restores_train_mode():
 
     def eval_fn(m, step):
         calls["n"] += 1
-        return {"eval/dummy": 0.0}
+        return {"eval/dummy": 0.0}, {}
 
     class RecordingLogger:
         def __init__(self):
             self.steps = []
+            self.figure_calls = 0
 
         def log(self, metrics, step):
             self.steps.append(step)
+
+        def log_figures(self, figures, step):
+            self.figure_calls += 1
 
         def finish(self):
             pass
@@ -76,6 +80,21 @@ def test_fit_runs_loop_with_eval_logging_and_restores_train_mode():
     )
     trainer.fit(loader, max_steps=6, eval_every=2, eval_fn=eval_fn, log_every=2)
 
-    assert calls["n"] == 2  # eval runs at steps 2 and 4 (guarded step > 0)
-    assert model.training is True  # train mode restored after eval toggling
-    assert 0 in logger.steps  # training metrics logged (log_every=2 hits step 0)
+    assert calls["n"] == 2
+    assert logger.figure_calls == 2
+    assert model.training is True
+    assert 0 in logger.steps
+
+
+def test_train_step_logs_grad_norm_when_clipping():
+    torch.manual_seed(0)
+    model = _model()
+    batch = TransitionBatch(
+        obs=torch.rand(4, 1, 3, 64, 64),
+        next_obs=torch.rand(4, 3, 64, 64),
+        action=torch.zeros(4, dtype=torch.long),
+    )
+    terms = [LossTerm("prediction", PredictionLoss(), 1.0), LossTerm("vq", VQLoss(), 1.0)]
+    trainer = Trainer(model, torch.optim.Adam(model.parameters(), lr=1e-3), terms, grad_clip=1.0)
+    logs = trainer.train_step(batch)
+    assert "train/grad_norm" in logs and logs["train/grad_norm"] >= 0.0

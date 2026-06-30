@@ -95,6 +95,6 @@ The recipe **works once position is decoupled** (control: NMI 0.62); on the rand
 3. **Near-free objective/bottleneck levers** — shrink the codebook (K=16 → ~6, à la Genie), a **selectivity / decorrelate-code-from-position** loss (reuses our VICReg covariance machinery), or ~2.5% **action supervision** (free in our synthetic toy; LAOM reports +4.2×).
 4. **Object-centric / agent-slot encoder** (C-SWM-style additive `z+Δz`, or slots → pick-agent-slot) — the principled, heavier build; position-invariance enforced by the encoder.
 
-See [`research/`](../../../../research/) for the surveyed evidence behind each.
+See [`research/`](../../../research/) for the surveyed evidence behind each.
 
 Verdict vs. Stage-0 (NMI > 0.8): **not yet met; mechanism validated, position-invariance partially addressed.** The control proves the method discovers actions (0.62) when position is decoupled; Exp 7→8 show that resolution matters (0.027→0.36) but a pooled head caps out, pointing to an explicit displacement readout or an object-centric encoder next.

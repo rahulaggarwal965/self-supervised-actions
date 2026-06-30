@@ -6,6 +6,7 @@ from matplotlib.figure import Figure  # noqa: E402
 
 from ssa.data.batch import TransitionBatch  # noqa: E402
 from ssa.eval.decoder_probe import (  # noqa: E402
+    decoded_action_delta_figure,
     decoded_counterfactual_figure,
     train_decoder_probe,
 )
@@ -41,3 +42,5 @@ def test_decoder_probe_trains_and_decodes_counterfactual():
     assert isinstance(probe, PixelDecoder)
     fig = decoded_counterfactual_figure(model, probe, _batch().obs[0])
     assert isinstance(fig, Figure)
+    delta = decoded_action_delta_figure(model, probe, _batch().obs[0])
+    assert isinstance(delta, Figure)

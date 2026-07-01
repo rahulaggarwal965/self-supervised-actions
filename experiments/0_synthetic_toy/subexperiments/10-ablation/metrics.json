@@ -1,0 +1,9 @@
+{
+  "note": "Ablation of the Exp-9 bundle. NMI is code<->action; position NMI where measured. All on the random-position toy, hires base, 5000 steps, seed 0.",
+  "exp8_base_hires":  {"K": 16, "losses": "vicreg",              "nmi_action": 0.364, "nmi_position": 0.044},
+  "k6_only":          {"K": 6,  "losses": "vicreg",              "nmi_action": 0.381},
+  "decorr_only":      {"K": 16, "losses": "vicreg+decorr",       "nmi_action": 0.295},
+  "pure_ssl":         {"K": 6,  "losses": "vicreg+decorr",       "nmi_action": 0.262, "nmi_position": 0.017},
+  "sup_only":         {"K": 16, "losses": "vicreg+sup2.5pct",    "nmi_action": 0.719},
+  "bundle_exp9":      {"K": 6,  "losses": "vicreg+sup+decorr",   "nmi_action": 0.942, "nmi_position": 0.012}
+}

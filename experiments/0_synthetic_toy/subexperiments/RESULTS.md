@@ -16,6 +16,7 @@ Procedural sprite toy (one red agent moving L/R/U/D + static distractors), K=16,
 | 7 | [+invariant inverse](7-invariant/) | action from feature-diff + global avg pool | translation-invariant *head* insufficient — codes still track position | 0.027 |
 | 8 | [+higher-res features](8-invariant-hires/) | read action from 16×16 (not 4×4) map | **resolution was a real obstacle** — NMI ~13×, position NMI drops | **0.364** |
 | 9 | [+bundle](9-bundle/) | K↓ (16→6) + 2.5% action supervision + decorrelate-from-position | **action discovered (semi-supervised)** — position NMI →0.012 | **0.942** |
+| 10 | [ablation](10-ablation/) | isolate each bundle lever | **the 2.5% labels carried it**; pure-SSL = 0.26 (below base) | 0.26–0.94 |
 
 (Exp 7 sanity: the same invariant model on the fixed-start setting reaches NMI **0.648** ≥ the control — the inverse is sound; the random-position gap is unchanged because the *encoder*, not just the head, carries position. Exp 8: at 16×16 the agent's 6-px move is resolvable; NMI(code,position) finally drops 0.067→0.044 while NMI(code,action) rises 0.027→0.364 — partial success, still < the 0.5 bar.)
 
@@ -89,14 +90,17 @@ The lesson: **invariance in the action head ≠ position-invariance in practice.
 
 [Exp 9](9-bundle/) then combined three of the review's levers on the hires base — **codebook K=16→6, ~2.5% action supervision, and a decorrelate-code-from-position term**. This **met the Stage-0 target**: `NMI(code, action)` **0.942**, ARI **0.915**, with `NMI(code, position)` collapsed to **0.012** and a near-diagonal confusion matrix. The random-position toy is solved for *action discovery* — past both the >0.8 target and the 0.62 control.
 
+The [ablation](10-ablation/) (Exp 10) then attributed that 0.94 cleanly: **the 2.5% labels carried it.** Supervision alone takes 0.36→0.72 (→0.94 with the small codebook); the label-free levers do not break the ceiling — K↓ alone ~0.38, decorrelation alone ~0.30, and the **pure-SSL** combination (K↓ + decorrelation, no labels) is **0.26**, *below* the Exp-8 baseline. Tellingly, that pure-SSL run drove `NMI(code,position)` to 0.017 (decorrelation *did* strip position) yet `NMI(code,action)` stayed 0.26 — removing position does not make the code capture the action.
+
 ## Where this leaves us
 
-Stage-0 is **met** on the random-position toy (NMI 0.94), but with two honest caveats and one open thread:
+Stage-0's NMI > 0.8 is met **only semi-supervised** (Exp 9, 2.5% labels). The project's novelty — *true* self-supervision — is **not yet achieved**: pure-SSL is stuck at ~0.26–0.36. The ablation localizes why, and it is the same fundamental obstacle throughout: **nothing in the label-free objective forces the code to carry the action** (the next latent is predictable from the current state; the action is a ~1% nudge). Position-invariance is solved (Exp 8 resolution + decorrelation), and it wasn't sufficient.
 
-- **Semi-supervised, combined intervention.** Exp 9 uses 2.5% action labels (free in this synthetic toy; pure-SSL peaked at Exp 8's 0.36) and changes three things at once. **Next: ablate** (supervision-only / decorrelation-only / K↓-only / pure-SSL = K↓+decorrelation, *no labels*) to attribute the gain and see how far label-free reaches.
-- **The dynamics still under-uses the action.** NMI measures the inverse model's code↔action alignment (now clean); the *forward model's* no-action gap stays small (3.8e-3) and the decoded counterfactual moves only subtly per code. The supervision fixed *identifying* the action, not *using* it in prediction.
-- **Strengthen the forward model:** contrastive next-latent prediction (C-SWM) or an explicit soft-argmax displacement readout, so the dynamics *needs* the code (raising the gap + counterfactual fidelity). The other surveyed routes (anti-aliased downsampling, object-centric encoder) remain for harder stages.
+The label-free fix must make the action *necessary for prediction*:
 
-See [`research/`](../../../research/) for the surveyed evidence behind each lever.
+1. **Context bottleneck** — throttle `z_t` into the dynamics (compress / noise / low-dim) so the next latent can't be predicted from the current state alone; the code must supply the displacement. Minimal-assumption (plain `(s, s')` pairs). **The leading next experiment.**
+2. **Same-state / different-action contrastive** (C-SWM) — `dynamics(z_t, code)` must beat next-latents from the *same state under other actions*; predicting from `z_t` alone can't win. Label-free but needs counterfactual/resettable-env data (the toy has it).
 
-Verdict vs. Stage-0 (NMI > 0.8): **met (semi-supervised).** The arc: mechanism validated under a position control (Exp 6, 0.62) → resolution shown to matter (Exp 8, 0.36) → action discovered on the general random-position toy with a small-codebook + 2.5%-supervision + decorrelation bundle (Exp 9, **0.94**). Remaining work is attribution (ablation), closing the label-free gap, and making the dynamics genuinely action-conditional.
+Other surveyed routes (anti-aliased downsampling, object-centric encoder) remain for harder stages. See [`research/`](../../../research/) §B.
+
+Verdict vs. Stage-0 (NMI > 0.8): **met semi-supervised (0.94); pure self-supervised is the open problem (~0.26–0.36).** The arc: mechanism validated under a position control (Exp 6, 0.62) → resolution shown to matter (Exp 8, 0.36) → 0.94 with 2.5% labels (Exp 9) → ablation shows the labels carried it (Exp 10). Next is a genuinely label-free objective that makes the action necessary — the context bottleneck.

@@ -9,4 +9,4 @@ seed: 0
 experiment: 0_synthetic_toy
 wandb:
   project: ssa
-  mode: offline   # set to "online" when ready, or "disabled" to skip wandb
+  mode: online   # real runs log live; smoke/verification runs pass wandb.mode=offline; tests use disabled

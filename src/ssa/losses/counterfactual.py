@@ -22,11 +22,27 @@ class CounterfactualContrastiveLoss:
     "win relatively" by drifting the prediction off the teacher-latent manifold (the
     raw-L2 variant did — ``cf_acc`` saturated at 1.0 while ``action_err`` blew up
     ~10x), which let it fight the prediction loss. Normalizing decouples the two.
+
+    ``mode="hinge"`` uses the C-SWM energy instead of a softmax: minimize the positive
+    energy ``H_pos = ‖pred − teacher(next)‖²`` and push each counterfactual energy up
+    to a ``margin`` (``max(0, margin − H_cf)``). The hinge is **bounded** — once a
+    counterfactual is beaten by the margin it contributes no gradient — so the loss
+    cannot trade prediction accuracy for an ever-larger relative gap. Pairs with an
+    additive/residual dynamics (``pred = z_t + T``), whose ``H_pos`` is the on-manifold
+    anchor. Best with the raw (un-normalized) energy.
     """
 
-    def __init__(self, temperature: float = 0.1, normalize: bool = True) -> None:
+    def __init__(
+        self,
+        temperature: float = 0.1,
+        normalize: bool = True,
+        mode: str = "infonce",
+        margin: float = 1.0,
+    ) -> None:
         self.temperature = temperature
         self.normalize = normalize
+        self.mode = mode
+        self.margin = margin
 
     def __call__(self, out, batch, model):
         pred = out.pred  # (B, D) — predicted next latent, dynamics(z_t, a_q)
@@ -35,6 +51,12 @@ class CounterfactualContrastiveLoss:
         b, m = cf.shape[0], cf.shape[1]
         with torch.no_grad():
             negs = model.teacher(cf.reshape(b * m, *cf.shape[2:])).reshape(b, m, -1)  # (B,M,D)
+        if self.mode == "hinge":
+            h_pos = (pred - pos).pow(2).mean(dim=-1)  # (B,)
+            h_cf = (pred.unsqueeze(1) - negs).pow(2).mean(dim=-1)  # (B, M)
+            loss = h_pos.mean() + torch.relu(self.margin - h_cf).mean()
+            acc = (h_pos.unsqueeze(1) < h_cf).all(dim=1).float().mean()
+            return loss, {"cf_contrastive": loss.item(), "cf_acc": acc.item()}
         cand = torch.cat([pos.unsqueeze(1), negs], dim=1)  # (B, 1+M, D); positive is col 0
         if self.normalize:
             p = F.normalize(pred, dim=-1)

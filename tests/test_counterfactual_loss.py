@@ -33,3 +33,16 @@ def test_counterfactual_low_when_pred_matches_observed_over_counterfactuals():
     val, log = CounterfactualContrastiveLoss(temperature=0.1)(out, batch, model)
     assert log["cf_acc"] == 1.0  # observed future is the closest for every sample
     assert float(val) < math.log(1 + m)  # below the uniform-over-(1+M) baseline
+
+
+def test_counterfactual_hinge_mode_low_when_pred_matches_observed():
+    b, m = 8, 3
+    observed = torch.rand(b, 3, 8, 8)
+    cf = torch.rand(b, m, 3, 8, 8)
+    pred = _teacher(observed)  # exactly the observed encoding -> H_pos = 0
+    out = SimpleNamespace(pred=pred, target=_teacher(observed))
+    batch = SimpleNamespace(next_cf=cf)
+    model = SimpleNamespace(teacher=_teacher)
+    val, log = CounterfactualContrastiveLoss(mode="hinge", margin=1.0)(out, batch, model)
+    assert log["cf_acc"] == 1.0  # observed energy below every counterfactual energy
+    assert float(val) >= 0.0

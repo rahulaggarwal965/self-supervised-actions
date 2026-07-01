@@ -1,0 +1,48 @@
+# C-SWM hinge variant of ssl_cf: counterfactual contrastive as a bounded hinge energy
+# (mode=hinge) instead of InfoNCE. Use with an ADDITIVE dynamics (+model.dynamics.residual=true)
+# and data.counterfactuals=true. Select with `loss=ssl_cf_hinge`.
+# (orig:) Truly label-free bundle with REAL counterfactual negatives: vicreg + decorrelate-
+# code-from-position + CounterfactualContrastiveLoss (dynamics(z,code) must predict the
+# observed next over the same state's next frames under other actions). One code cannot
+# predict all the different real futures, so the code must encode the action — collapse
+# is structurally impossible (unlike forward-selection, Exp 11). Requires the dataset to
+# generate counterfactuals (data.counterfactuals=true). No supervision. Intended with
+# model=minimal_invariant_hires, model.num_codes=6. Select with `loss=ssl_cf`.
+terms:
+  - name: prediction
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.prediction.PredictionLoss
+  - name: vq
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.vq.VQLoss
+      beta: 0.25
+  - name: margin
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.margin.MarginLoss
+      m: 0.002
+  - name: usage
+    weight: 0.1
+    fn:
+      _target_: ssa.losses.usage.UsageLoss
+      sample_weight: 1.0
+      batch_weight: 1.0
+  - name: vicreg
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.vicreg.VICRegLoss
+      var_weight: 25.0
+      cov_weight: 1.0
+      gamma: 1.0
+  - name: decorrelation
+    weight: 2.0
+    fn:
+      _target_: ssa.losses.decorrelation.DecorrelationLoss
+  - name: cf_contrastive
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.counterfactual.CounterfactualContrastiveLoss
+      mode: hinge
+      margin: 1.0

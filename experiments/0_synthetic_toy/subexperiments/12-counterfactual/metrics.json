@@ -1,0 +1,15 @@
+{
+  "note": "Label-free: loss=ssl_cf (counterfactual contrastive + decorrelation + vicreg), model=minimal_invariant_hires, K=6, data.counterfactuals=true, NO supervision. Random-position toy, 5000 steps, seed 0.",
+  "nmi": 0.381,
+  "ari": 0.252,
+  "nmi_position": 0.032,
+  "perplexity": 5.663,
+  "codes_used": 6,
+  "codes_histogram": [243, 115, 161, 255, 116, 134],
+  "z_std": 1.024,
+  "action_err": 0.424,
+  "noaction_err": 0.435,
+  "gap": 0.011,
+  "cf_acc": 1.0,
+  "num_codes": 6
+}

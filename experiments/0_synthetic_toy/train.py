@@ -119,7 +119,26 @@ def main(cfg):
     eval_loader = DataLoader(eval_ds, batch_size=cfg.data.batch_size, collate_fn=transition_collate)
 
     model = build_model(cfg)
-    optim = torch.optim.Adam(model.parameters(), lr=cfg.train.lr)
+    # two-stage option: warm-start from a checkpoint and freeze the encoder, so the
+    # action head (inverse/VQ/dynamics/contrastive) is learned on a fixed, healthy
+    # representation and cannot degrade it.
+    if cfg.train.get("init_from"):
+        ckpt = pathlib.Path(cfg.train.init_from)
+        if not ckpt.is_absolute():
+            ckpt = pathlib.Path(__file__).parent / ckpt
+        state = torch.load(ckpt, map_location="cpu")["model"]
+        if cfg.train.get("freeze_encoder"):
+            # two-stage: transplant only the (K-agnostic) representation, so the
+            # action head trains fresh on it at whatever codebook size.
+            state = {k: v for k, v in state.items() if k.startswith(("encoder.", "teacher."))}
+        loaded = model.load_state_dict(state, strict=False)
+        print(
+            f"[init_from] {len(state)} tensors from {ckpt.name}; {len(loaded.missing_keys)} fresh"
+        )
+    if cfg.train.get("freeze_encoder"):
+        for p in model.encoder.parameters():
+            p.requires_grad_(False)
+    optim = torch.optim.Adam([p for p in model.parameters() if p.requires_grad], lr=cfg.train.lr)
     terms = [LossTerm(t.name, instantiate(t.fn), t.weight) for t in cfg.loss.terms]
 
     logger = (

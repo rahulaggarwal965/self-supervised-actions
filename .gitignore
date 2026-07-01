@@ -8,3 +8,4 @@ outputs/
 multirun/
 *.pt
 .envrc
+experiments/0_synthetic_toy/stage1_encoder.pt

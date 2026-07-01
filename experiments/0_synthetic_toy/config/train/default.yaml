@@ -8,3 +8,7 @@ grad_clip: 1.0
 # reconstruct the agent at arbitrary positions, which converges (~1e-5) by ~2.5k.
 probe_steps: 3000
 device: cuda
+# two-stage: warm-start weights from a checkpoint and/or freeze the encoder
+# (path is relative to the experiment dir). Defaults off.
+init_from: null
+freeze_encoder: false

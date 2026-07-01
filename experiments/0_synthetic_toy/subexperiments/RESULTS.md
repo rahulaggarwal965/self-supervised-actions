@@ -18,6 +18,7 @@ Procedural sprite toy (one red agent moving L/R/U/D + static distractors), K=16,
 | 9 | [+bundle](9-bundle/) | K↓ (16→6) + 2.5% action supervision + decorrelate-from-position | **action discovered (semi-supervised)** — position NMI →0.012 | **0.942** |
 | 10 | [ablation](10-ablation/) | isolate each bundle lever | **the 2.5% labels carried it**; pure-SSL = 0.26 (below base) | 0.26–0.94 |
 | 11 | [+forward-selection](11-forward-selection/) | make dynamics *need* the code (label-free) | **fixes the dynamics (gap 3.8e-3→0.54) but collapses codebook to ~1** | 0.003 |
+| 12 | [+counterfactual contrastive](12-counterfactual/) | predict observed next over real other-action futures (label-free) | **best pure-SSL, collapse-proof (6 codes), position-free — but plateaus** | 0.381 |
 
 (Exp 7 sanity: the same invariant model on the fixed-start setting reaches NMI **0.648** ≥ the control — the inverse is sound; the random-position gap is unchanged because the *encoder*, not just the head, carries position. Exp 8: at 16×16 the agent's 6-px move is resolvable; NMI(code,position) finally drops 0.067→0.044 while NMI(code,action) rises 0.027→0.364 — partial success, still < the 0.5 bar.)
 
@@ -99,12 +100,14 @@ Stage-0's NMI > 0.8 is met **only semi-supervised** (Exp 9, 2.5% labels). The pr
 
 The label-free fix must make the action *necessary for prediction*. [Exp 11](11-forward-selection/) tried the cheapest version — a **forward-selection** term (the assigned code must make the dynamics predict the true next best, contrasted against the model's *own* predictions under other codes). It **fixed the dynamics decisively** (no-action gap 3.8e-3 → **0.54**) but **collapsed the codebook to ~1 code** (NMI → 0): a single "apply the change" code trivially wins the code-contrastive, so the code space collapses instead of decomposing into 4 actions. Forcing the dynamics to use *a* code ≠ forcing the *right decomposition*.
 
-That points to the robust version:
+[Exp 12](12-counterfactual/) built the robust version — a **same-state counterfactual contrastive**: `dynamics(z_t, code)` must predict the observed next over the *real* next-states under other actions (label-free; the toy rolls them out). This **structurally prevents collapse** (a single code can't predict four different futures) and delivered the **best pure-SSL result so far — NMI 0.381**, ARI 0.25, all 6 codes balanced, position decoupled (0.032). But it plateaus below the bar: `cf_acc` saturates at 1.0 while `action_err` blows up to 0.42, i.e. the contrastive is trivially satisfied (coarsely beating counterfactuals) without forcing a clean 4-way decomposition or predicting well. A usage-crank probe on the forward-selection variant behaved similarly (no collapse, NMI 0.32).
 
-1. **Same-state / different-action contrastive (real negatives).** `dynamics(z_t, code)` must predict the observed next over the *actual* next-states under other actions (the toy rolls them out; still label-free). One code cannot predict four genuinely-different futures, so collapse is structurally impossible — the fix for Exp 11. **Leading next experiment.**
-2. **Cheap probe first:** crank usage-entropy / lower forward-selection weight to see if anti-collapse pressure alone lets forward-selection decompose into ≥4 codes.
-3. **Context bottleneck** — throttle `z_t` into the dynamics so the next can't be predicted from the current state alone. Complementary, minimal-assumption.
+## Where this leaves us
 
-Other surveyed routes (anti-aliased downsampling, object-centric encoder) remain for harder stages. See [`research/`](../../../research/) §B.
+Two regimes, clearly separated:
+- **Semi-supervised: solved.** With 2.5% action labels (free in the toy), NMI **0.94** (Exp 9).
+- **Pure self-supervised: partial, unresolved.** The best label-free result is NMI **0.38** (Exp 12) — position-free and collapse-proof, a real improvement over the 0.26–0.36 ceiling, but well short of the 0.62 control / 0.8 target.
 
-Verdict vs. Stage-0 (NMI > 0.8): **met semi-supervised (0.94); pure self-supervised is the open problem (~0.26–0.36).** The arc: position control (Exp 6, 0.62) → resolution matters (Exp 8, 0.36) → 0.94 with 2.5% labels (Exp 9) → ablation: the labels carried it (Exp 10) → forward-selection makes the dynamics act on the code but collapses the codebook (Exp 11). The genuinely-label-free path is now a same-state-counterfactual contrastive that structurally prevents collapse.
+The counterfactual contrastive is the right, collapse-proof *mechanism*; closing the remaining gap is a tuning/refinement problem (contrastive weight/temperature vs prediction — it currently over-weights and degrades the representation; a harder/better-calibrated contrastive, more negatives, or a two-stage schedule) or calls for a stronger objective. Complementary untried routes: **context bottleneck** (throttle `z_t` into the dynamics) and the **object-centric encoder**. See [`research/`](../../../research/) §B.
+
+Verdict vs. Stage-0 (NMI > 0.8): **met semi-supervised (0.94, Exp 9); pure self-supervised partially achieved (0.38, Exp 12) and the standing research problem.** The arc: position control (Exp 6, 0.62) → resolution matters (Exp 8, 0.36) → 0.94 with 2.5% labels (Exp 9) → ablation: the labels carried it (Exp 10) → forward-selection acts on the code but collapses (Exp 11) → counterfactual contrastive: collapse-proof, best label-free 0.38 (Exp 12). Label-free discovery is improving but not solved — the open frontier.

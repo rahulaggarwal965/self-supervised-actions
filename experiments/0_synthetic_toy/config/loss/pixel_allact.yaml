@@ -1,0 +1,32 @@
+# Pixel-delta head (model=minimal_invariant_pixel) with ALL-ACTION direct supervision.
+# For every same-state future (observed next + counterfactuals) we infer its code and
+# regress the code-conditioned prediction onto that real future's frame-delta. This both
+# (a) trains the inverse to give distinct actions distinct codes (one code can't predict
+# two different futures) — discovery — and (b) makes each code's dynamics render its
+# action's true move — a clean, distinct counterfactual (not the mean blur). No contrastive
+# needed. Needs data.counterfactuals=true. Select `loss=pixel_allact`.
+terms:
+  - name: all_action_prediction
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.all_action_prediction.AllActionPredictionLoss
+  - name: vq
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.vq.VQLoss
+      beta: 0.25
+  - name: margin
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.margin.MarginLoss
+      m: 0.002
+  - name: usage
+    weight: 0.1
+    fn:
+      _target_: ssa.losses.usage.UsageLoss
+      sample_weight: 1.0
+      batch_weight: 1.0
+  - name: decorrelation
+    weight: 2.0
+    fn:
+      _target_: ssa.losses.decorrelation.DecorrelationLoss

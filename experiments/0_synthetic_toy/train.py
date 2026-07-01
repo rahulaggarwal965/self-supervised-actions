@@ -100,7 +100,12 @@ def main(cfg):
     device = cfg.train.device if torch.cuda.is_available() else "cpu"
     env_kwargs = OmegaConf.to_container(cfg.data.env, resolve=True)
 
-    train_ds = ToyDataset(cfg.data.train_size, seed=cfg.data.seed, env_cfg=env_kwargs)
+    train_ds = ToyDataset(
+        cfg.data.train_size,
+        seed=cfg.data.seed,
+        env_cfg=env_kwargs,
+        counterfactuals=cfg.data.get("counterfactuals", False),
+    )
     eval_ds = ToyDataset(cfg.data.eval_size, seed=cfg.data.seed + 1, env_cfg=env_kwargs)
     train_loader = DataLoader(
         train_ds,

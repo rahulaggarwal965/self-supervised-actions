@@ -58,6 +58,12 @@ class CounterfactualContrastiveLoss:
             acc = (h_pos.unsqueeze(1) < h_cf).all(dim=1).float().mean()
             return loss, {"cf_contrastive": loss.item(), "cf_acc": acc.item()}
         cand = torch.cat([pos.unsqueeze(1), negs], dim=1)  # (B, 1+M, D); positive is col 0
+        proj = getattr(model, "projection", None)
+        if proj is not None:
+            # contrast in the projected subspace; raw pred stays anchored by the
+            # regression loss, so a strong contrastive can't drift the prediction
+            pred = proj(pred)
+            cand = proj(cand)
         if self.normalize:
             p = F.normalize(pred, dim=-1)
             c = F.normalize(cand, dim=-1)

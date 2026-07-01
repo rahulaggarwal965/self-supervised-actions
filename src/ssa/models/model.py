@@ -23,13 +23,19 @@ class LatentActionModel(nn.Module):
     the encoder is kept and updated via ``update_teacher()``.
     """
 
-    def __init__(self, encoder, inverse, quantizer, dynamics, head, teacher_momentum=None) -> None:
+    def __init__(
+        self, encoder, inverse, quantizer, dynamics, head, teacher_momentum=None, projection=None
+    ) -> None:
         super().__init__()
         self.encoder = encoder
         self.inverse = inverse
         self.quantizer = quantizer
         self.dynamics = dynamics
         self.head = head
+        # optional projection head for the contrastive loss: it shapes a projected
+        # subspace for action-discrimination without dragging the raw prediction
+        # (anchored by the regression loss) off the teacher-latent manifold.
+        self.projection = projection
         self.teacher_momentum = teacher_momentum
         if teacher_momentum is not None:
             self.teacher = copy.deepcopy(encoder)

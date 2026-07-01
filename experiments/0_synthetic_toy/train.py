@@ -38,6 +38,7 @@ from ssa.utils.seed import set_seed  # noqa: E402
 def build_model(cfg):
     from ssa.models.model import LatentActionModel
 
+    proj = cfg.model.get("projection", None)
     return LatentActionModel(
         encoder=instantiate(cfg.model.encoder),
         inverse=instantiate(cfg.model.inverse),
@@ -45,6 +46,7 @@ def build_model(cfg):
         dynamics=instantiate(cfg.model.dynamics),
         head=instantiate(cfg.model.head),
         teacher_momentum=cfg.model.teacher_momentum,
+        projection=instantiate(proj) if proj is not None else None,
     )
 
 

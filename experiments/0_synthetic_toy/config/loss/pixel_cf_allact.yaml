@@ -1,0 +1,37 @@
+# Pixel-delta head + BOTH mechanisms:
+#  - cf_contrastive (pixel space): breaks the mean-seeking symmetry and forces the inverse
+#    to give distinct actions distinct codes (discovery / NMI). This is load-bearing — MSE
+#    alone collapses to the mean because the agent is a small, low-variance signal.
+#  - all_action_prediction: once codes are discriminated, regress each code's prediction
+#    onto its action's REAL next frame, so every counterfactual is a proper moved-agent
+#    frame (not just the observed one). Needs data.counterfactuals=true. `loss=pixel_cf_allact`.
+terms:
+  - name: cf_contrastive
+    weight: 4.0
+    fn:
+      _target_: ssa.losses.counterfactual.CounterfactualContrastiveLoss
+      temperature: 0.03
+  - name: all_action_prediction
+    weight: 2.0
+    fn:
+      _target_: ssa.losses.all_action_prediction.AllActionPredictionLoss
+  - name: vq
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.vq.VQLoss
+      beta: 0.25
+  - name: margin
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.margin.MarginLoss
+      m: 0.002
+  - name: usage
+    weight: 0.1
+    fn:
+      _target_: ssa.losses.usage.UsageLoss
+      sample_weight: 1.0
+      batch_weight: 1.0
+  - name: decorrelation
+    weight: 2.0
+    fn:
+      _target_: ssa.losses.decorrelation.DecorrelationLoss

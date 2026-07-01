@@ -10,3 +10,4 @@ experiment: 0_synthetic_toy
 wandb:
   project: ssa
   mode: online   # real runs log live; smoke/verification runs pass wandb.mode=offline; tests use disabled
+  name: null     # readable run name for the dashboard; set per run, e.g. wandb.name=13-delta-contrastive

@@ -147,6 +147,7 @@ def main(cfg):
         else WandbLogger(
             project=cfg.wandb.project,
             mode=cfg.wandb.mode,
+            name=cfg.wandb.get("name"),
             config=OmegaConf.to_container(cfg, resolve=True),
         )
     )

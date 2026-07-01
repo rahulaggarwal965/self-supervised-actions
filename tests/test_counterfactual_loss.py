@@ -46,3 +46,12 @@ def test_counterfactual_hinge_mode_low_when_pred_matches_observed():
     val, log = CounterfactualContrastiveLoss(mode="hinge", margin=1.0)(out, batch, model)
     assert log["cf_acc"] == 1.0  # observed energy below every counterfactual energy
     assert float(val) >= 0.0
+
+
+def test_counterfactual_delta_mode_runs():
+    b, m, d = 8, 3, 16
+    out = SimpleNamespace(pred=torch.randn(b, d), target=torch.randn(b, d), z_ctx=torch.randn(b, d))
+    batch = SimpleNamespace(next_cf=torch.rand(b, m, 3, 8, 8))
+    model = SimpleNamespace(teacher=_teacher)
+    val, log = CounterfactualContrastiveLoss(delta=True)(out, batch, model)
+    assert val.ndim == 0 and "cf_acc" in log

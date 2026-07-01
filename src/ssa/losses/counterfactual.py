@@ -38,11 +38,13 @@ class CounterfactualContrastiveLoss:
         normalize: bool = True,
         mode: str = "infonce",
         margin: float = 1.0,
+        delta: bool = False,
     ) -> None:
         self.temperature = temperature
         self.normalize = normalize
         self.mode = mode
         self.margin = margin
+        self.delta = delta
 
     def __call__(self, out, batch, model):
         pred = out.pred  # (B, D) — predicted next latent, dynamics(z_t, a_q)
@@ -51,6 +53,14 @@ class CounterfactualContrastiveLoss:
         b, m = cf.shape[0], cf.shape[1]
         with torch.no_grad():
             negs = model.teacher(cf.reshape(b * m, *cf.shape[2:])).reshape(b, m, -1)  # (B,M,D)
+        if self.delta:
+            # contrast the *change* relative to the current state: subtract the
+            # (detached) context latent, cancelling the shared static scene so the
+            # contrast is purely over the action-induced displacement.
+            ref = out.z_ctx.detach()  # (B, D)
+            pred = pred - ref
+            pos = pos - ref
+            negs = negs - ref.unsqueeze(1)
         if self.mode == "hinge":
             h_pos = (pred - pos).pow(2).mean(dim=-1)  # (B,)
             h_cf = (pred.unsqueeze(1) - negs).pow(2).mean(dim=-1)  # (B, M)

@@ -9,7 +9,6 @@ observation — forcing the action to capture controllable change.
 - `experiments/` — sandbox experiments; each has a README (idea/hypothesis),
   Hydra config, and a `results/` doc with figures.
 - `research/` — papers wiki/database (pipeline is a later cycle).
-- `docs/specs`, `docs/plans` — design specs and implementation plans.
 
 ## Setup
 ```bash

@@ -1,0 +1,37 @@
+# Pixel-delta head (model=minimal_invariant_pixel) + Sinkhorn same-state coverage.
+# The prediction loss alone lets the forward model predict the mean delta (a 4-way blur)
+# and ignore the code (NMI collapses). The coverage term forces the K code-conditioned
+# predicted frame-deltas to match-and-cover the real per-action outcomes, so the code
+# MUST encode the action (discovery) AND each code renders its correct, distinct move
+# (a clean, visible counterfactual). Needs data.counterfactuals=true. Select `loss=pixel_cov`.
+terms:
+  - name: prediction
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.prediction.PredictionLoss
+  - name: vq
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.vq.VQLoss
+      beta: 0.25
+  - name: margin
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.margin.MarginLoss
+      m: 0.002
+  - name: usage
+    weight: 0.1
+    fn:
+      _target_: ssa.losses.usage.UsageLoss
+      sample_weight: 1.0
+      batch_weight: 1.0
+  - name: decorrelation
+    weight: 2.0
+    fn:
+      _target_: ssa.losses.decorrelation.DecorrelationLoss
+  - name: sinkhorn_coverage
+    weight: 10.0
+    fn:
+      _target_: ssa.losses.sinkhorn_coverage.SinkhornCoverageLoss
+      eps: 0.05
+      iters: 20

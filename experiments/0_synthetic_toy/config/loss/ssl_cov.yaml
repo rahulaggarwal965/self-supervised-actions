@@ -1,0 +1,45 @@
+# Coverage bundle: ssl_cf (delta+projection counterfactual contrastive for discovery)
+# PLUS FutureCoverageLoss to make the RAW forward model action-conditional (distinct,
+# crisp decoded counterfactuals). Use with model=minimal_invariant_hires_proj, K=6,
+# data.counterfactuals=true, data.env.step=20. Select with `loss=ssl_cov`.
+terms:
+  - name: prediction
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.prediction.PredictionLoss
+  - name: vq
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.vq.VQLoss
+      beta: 0.25
+  - name: margin
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.margin.MarginLoss
+      m: 0.002
+  - name: usage
+    weight: 0.1
+    fn:
+      _target_: ssa.losses.usage.UsageLoss
+      sample_weight: 1.0
+      batch_weight: 1.0
+  - name: vicreg
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.vicreg.VICRegLoss
+      var_weight: 25.0
+      cov_weight: 1.0
+      gamma: 1.0
+  - name: decorrelation
+    weight: 2.0
+    fn:
+      _target_: ssa.losses.decorrelation.DecorrelationLoss
+  - name: cf_contrastive
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.counterfactual.CounterfactualContrastiveLoss
+      temperature: 0.1
+  - name: future_coverage
+    weight: 5.0
+    fn:
+      _target_: ssa.losses.coverage.FutureCoverageLoss

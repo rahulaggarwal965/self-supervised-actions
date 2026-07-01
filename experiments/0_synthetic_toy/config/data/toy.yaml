@@ -3,6 +3,9 @@ eval_size: 1024
 seed: 0
 batch_size: 128
 num_workers: 4
+# also generate same-state counterfactual futures on the train set (label-free
+# negatives for loss=ssl_cf). Off by default; enable with data.counterfactuals=true.
+counterfactuals: false
 env:
   size: 64
   agent: 6

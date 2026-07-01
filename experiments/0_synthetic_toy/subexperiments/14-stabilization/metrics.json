@@ -1,0 +1,7 @@
+{
+  "note": "Stabilizing the delta-contrastive (Exp 13). Seed variance + two-stage freeze + prediction/contrastive rebalance. All LABEL-FREE, random-position toy, hires_proj + delta + counterfactuals, K=6.",
+  "delta_w15_seed_sweep": {"seed0": 0.785, "seed1": 0.425, "seed2": 0.641, "seed3": 0.397, "mean": 0.562},
+  "two_stage_freeze": {"w15": {"nmi": 0.553, "action_err": 0.93}, "w15_s1": {"nmi": 0.512, "action_err": 0.93}, "note": "freezing the encoder did NOT clean action_err — degradation is in the dynamics"},
+  "prediction_rebalance": {"predw5": {"nmi": 0.195, "action_err": 0.456}, "predw10": {"nmi_fullval": 0.698, "nmi_position": 0.029, "action_err": 0.304, "codes_used": 6}, "predw5_s1": {"nmi": 0.515, "action_err": 0.33}},
+  "best_balanced": "predw10: NMI 0.70, position-NMI 0.03, action_err 0.30 (clean rep) — but no-action gap ~0.006 (dynamics weakly action-conditional)"
+}

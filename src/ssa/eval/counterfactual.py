@@ -9,9 +9,15 @@ def counterfactual_grid(model, obs):
     predictions (meaningful only for a ``PixelDecoder`` head).
     """
     device = next(model.parameters()).device
-    z = model.encoder(obs[-1:].to(device))  # (1, dim)
+    it = obs[-1:].to(device)
+    z = model.encoder(it)  # (1, dim)
     codebook = model.quantizer.codebook.weight  # (K, action_dim)
     preds = [
         model.head.predict(model.dynamics(z, codebook[k : k + 1])) for k in range(len(codebook))
     ]
-    return torch.cat(preds, dim=0)
+    grid = torch.cat(preds, dim=0)  # (K, C, H, W)
+    # a delta head predicts the change Δ = I_{t+1} - I_t; add I_t so the grid shows the
+    # actual predicted next frame (agent moved) rather than the raw (cyan) delta.
+    if getattr(model.head, "delta", False):
+        grid = grid + it
+    return grid

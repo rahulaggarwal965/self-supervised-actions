@@ -13,13 +13,19 @@ def _show(ax, img: torch.Tensor) -> None:
 
 @torch.no_grad()
 def reconstruction_panel(model, batch, n: int = 8) -> Figure:
-    """Rows of [I_t, true I_{t+1}, predicted I_{t+1}] (PixelDecoder head only)."""
+    """Rows of [I_t, true I_{t+1}, predicted I_{t+1}] (PixelDecoder head only).
+
+    For a delta head the prediction is the change ``Δ = I_{t+1} - I_t``; we add ``I_t``
+    back so the panel shows the actual reconstructed frame, not the (cyan) delta.
+    """
     out = model(batch)
     n = min(n, batch.obs.shape[0])
+    delta = getattr(model.head, "delta", False)
     fig, axes = plt.subplots(n, 3, figsize=(6, 2 * n), squeeze=False)
-    titles = ["I_t", "true I_{t+1}", "pred"]
+    titles = ["I_t", "true I_{t+1}", "pred I_{t+1}"]
     for i in range(n):
-        imgs = [batch.obs[i, -1], batch.next_obs[i], out.pred[i]]
+        pred_frame = batch.obs[i, -1] + out.pred[i] if delta else out.pred[i]
+        imgs = [batch.obs[i, -1], batch.next_obs[i], pred_frame]
         for j, img in enumerate(imgs):
             _show(axes[i][j], img)
             if i == 0:

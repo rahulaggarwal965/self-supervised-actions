@@ -1,0 +1,39 @@
+# pixel_cf_allact (contrastive discrimination + all-action per-code frame targets) PLUS an
+# L1 delta-sparsity term to remove the residual cyan "ghost" squares: the true change is
+# sparse (only the agent moves), so penalizing mean|Δ| forces zero change at the static
+# distractors/background, leaving a clean reconstructed I_{t+1}. Pair with a finer decoder
+# (+model.head.start=8). Needs data.counterfactuals=true. Select `loss=pixel_clean`.
+terms:
+  - name: cf_contrastive
+    weight: 4.0
+    fn:
+      _target_: ssa.losses.counterfactual.CounterfactualContrastiveLoss
+      temperature: 0.03
+  - name: all_action_prediction
+    weight: 2.0
+    fn:
+      _target_: ssa.losses.all_action_prediction.AllActionPredictionLoss
+  - name: delta_sparsity
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.delta_sparsity.DeltaSparsityLoss
+  - name: vq
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.vq.VQLoss
+      beta: 0.25
+  - name: margin
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.margin.MarginLoss
+      m: 0.002
+  - name: usage
+    weight: 0.1
+    fn:
+      _target_: ssa.losses.usage.UsageLoss
+      sample_weight: 1.0
+      batch_weight: 1.0
+  - name: decorrelation
+    weight: 2.0
+    fn:
+      _target_: ssa.losses.decorrelation.DecorrelationLoss

@@ -17,6 +17,7 @@ Procedural sprite toy (one red agent moving L/R/U/D + static distractors), K=16,
 | 8 | [+higher-res features](8-invariant-hires/) | read action from 16×16 (not 4×4) map | **resolution was a real obstacle** — NMI ~13×, position NMI drops | **0.364** |
 | 9 | [+bundle](9-bundle/) | K↓ (16→6) + 2.5% action supervision + decorrelate-from-position | **action discovered (semi-supervised)** — position NMI →0.012 | **0.942** |
 | 10 | [ablation](10-ablation/) | isolate each bundle lever | **the 2.5% labels carried it**; pure-SSL = 0.26 (below base) | 0.26–0.94 |
+| 11 | [+forward-selection](11-forward-selection/) | make dynamics *need* the code (label-free) | **fixes the dynamics (gap 3.8e-3→0.54) but collapses codebook to ~1** | 0.003 |
 
 (Exp 7 sanity: the same invariant model on the fixed-start setting reaches NMI **0.648** ≥ the control — the inverse is sound; the random-position gap is unchanged because the *encoder*, not just the head, carries position. Exp 8: at 16×16 the agent's 6-px move is resolvable; NMI(code,position) finally drops 0.067→0.044 while NMI(code,action) rises 0.027→0.364 — partial success, still < the 0.5 bar.)
 
@@ -96,11 +97,14 @@ The [ablation](10-ablation/) (Exp 10) then attributed that 0.94 cleanly: **the 2
 
 Stage-0's NMI > 0.8 is met **only semi-supervised** (Exp 9, 2.5% labels). The project's novelty — *true* self-supervision — is **not yet achieved**: pure-SSL is stuck at ~0.26–0.36. The ablation localizes why, and it is the same fundamental obstacle throughout: **nothing in the label-free objective forces the code to carry the action** (the next latent is predictable from the current state; the action is a ~1% nudge). Position-invariance is solved (Exp 8 resolution + decorrelation), and it wasn't sufficient.
 
-The label-free fix must make the action *necessary for prediction*:
+The label-free fix must make the action *necessary for prediction*. [Exp 11](11-forward-selection/) tried the cheapest version — a **forward-selection** term (the assigned code must make the dynamics predict the true next best, contrasted against the model's *own* predictions under other codes). It **fixed the dynamics decisively** (no-action gap 3.8e-3 → **0.54**) but **collapsed the codebook to ~1 code** (NMI → 0): a single "apply the change" code trivially wins the code-contrastive, so the code space collapses instead of decomposing into 4 actions. Forcing the dynamics to use *a* code ≠ forcing the *right decomposition*.
 
-1. **Context bottleneck** — throttle `z_t` into the dynamics (compress / noise / low-dim) so the next latent can't be predicted from the current state alone; the code must supply the displacement. Minimal-assumption (plain `(s, s')` pairs). **The leading next experiment.**
-2. **Same-state / different-action contrastive** (C-SWM) — `dynamics(z_t, code)` must beat next-latents from the *same state under other actions*; predicting from `z_t` alone can't win. Label-free but needs counterfactual/resettable-env data (the toy has it).
+That points to the robust version:
+
+1. **Same-state / different-action contrastive (real negatives).** `dynamics(z_t, code)` must predict the observed next over the *actual* next-states under other actions (the toy rolls them out; still label-free). One code cannot predict four genuinely-different futures, so collapse is structurally impossible — the fix for Exp 11. **Leading next experiment.**
+2. **Cheap probe first:** crank usage-entropy / lower forward-selection weight to see if anti-collapse pressure alone lets forward-selection decompose into ≥4 codes.
+3. **Context bottleneck** — throttle `z_t` into the dynamics so the next can't be predicted from the current state alone. Complementary, minimal-assumption.
 
 Other surveyed routes (anti-aliased downsampling, object-centric encoder) remain for harder stages. See [`research/`](../../../research/) §B.
 
-Verdict vs. Stage-0 (NMI > 0.8): **met semi-supervised (0.94); pure self-supervised is the open problem (~0.26–0.36).** The arc: mechanism validated under a position control (Exp 6, 0.62) → resolution shown to matter (Exp 8, 0.36) → 0.94 with 2.5% labels (Exp 9) → ablation shows the labels carried it (Exp 10). Next is a genuinely label-free objective that makes the action necessary — the context bottleneck.
+Verdict vs. Stage-0 (NMI > 0.8): **met semi-supervised (0.94); pure self-supervised is the open problem (~0.26–0.36).** The arc: position control (Exp 6, 0.62) → resolution matters (Exp 8, 0.36) → 0.94 with 2.5% labels (Exp 9) → ablation: the labels carried it (Exp 10) → forward-selection makes the dynamics act on the code but collapses the codebook (Exp 11). The genuinely-label-free path is now a same-state-counterfactual contrastive that structurally prevents collapse.

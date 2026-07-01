@@ -1,0 +1,14 @@
+{
+  "note": "Label-free: loss=ssl (forward-selection + decorrelation + vicreg), model=minimal_invariant_hires, K=6, NO supervision. Random-position toy, 5000 steps, seed 0.",
+  "nmi": 0.003,
+  "ari": -0.0004,
+  "perplexity": 1.183,
+  "codes_used": 2,
+  "codes_histogram": [0, 0, 0, 886, 138, 0],
+  "z_std": 1.029,
+  "action_err": 0.072,
+  "noaction_err": 0.613,
+  "gap": 0.541,
+  "fwd_sel_acc": 0.852,
+  "num_codes": 6
+}

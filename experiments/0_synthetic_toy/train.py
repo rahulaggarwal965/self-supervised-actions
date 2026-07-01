@@ -162,6 +162,9 @@ def main(cfg):
         eval_fn=make_eval_fn(eval_loader, device, cfg.model.num_codes),
         log_every=cfg.train.log_every,
     )
+    # save the checkpoint BEFORE the (slow, failure-prone) decoder-probe + figure
+    # rendering, so a crash or wall-clock kill in that tail never costs the model.
+    trainer.save("model.pt")
     # latent heads have no decoder of their own — train a post-hoc decoder probe
     # to render the predicted next-latents back to pixels for a counterfactual.
     if isinstance(model.head, LatentHead):
@@ -174,7 +177,6 @@ def main(cfg):
             },
             cfg.train.max_steps,
         )
-    trainer.save("model.pt")
     logger.finish()
 
 

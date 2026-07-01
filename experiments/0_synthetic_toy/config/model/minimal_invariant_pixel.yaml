@@ -1,0 +1,33 @@
+# Pixel-delta variant: position-invariant inverse + additive dynamics, but the head
+# is a PixelDecoder that predicts the frame CHANGE I_{t+1}-I_t (delta=true) instead of a
+# teacher latent. Rationale (from the latent diagnosis): in latent space the action's
+# footprint (~1.7) is smaller than the forward model's prediction noise (~3.9), so it is
+# swamped; in PIXEL space a 20px agent move is a huge, unambiguous signal, so the forward
+# model can render a clean, distinct counterfactual directly (LAPO-style). Select with
+# `model=minimal_invariant_pixel`.
+dim: 256
+action_dim: 64
+num_codes: 6
+teacher_momentum: 0.99 # unused by PixelDecoder, kept so build_model stays uniform
+encoder:
+  _target_: ssa.models.encoder.Encoder
+  in_ch: 3
+  dim: ${model.dim}
+inverse:
+  _target_: ssa.models.inverse.InvariantInverseModel
+  feat_ch: 64
+  feat_level: 2
+  action_dim: ${model.action_dim}
+quantizer:
+  _target_: ssa.models.quantizer.VectorQuantizer
+  num_codes: ${model.num_codes}
+  dim: ${model.action_dim}
+dynamics:
+  _target_: ssa.models.dynamics.Dynamics
+  dim: ${model.dim}
+  action_dim: ${model.action_dim}
+  additive: true
+head:
+  _target_: ssa.models.heads.PixelDecoder
+  dim: ${model.dim}
+  delta: true

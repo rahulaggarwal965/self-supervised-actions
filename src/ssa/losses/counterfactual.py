@@ -1,6 +1,8 @@
 import torch
 import torch.nn.functional as F
 
+from ssa.models.heads import PixelDecoder
+
 
 class CounterfactualContrastiveLoss:
     """Make the action necessary — against *real* counterfactual futures.
@@ -46,11 +48,32 @@ class CounterfactualContrastiveLoss:
         self.margin = margin
         self.delta = delta
 
+    def _infonce(self, pred, pos, negs, b):
+        """Negative-MSE InfoNCE over frames: pred must sit closer to the observed
+        next-frame (positive, col 0) than to the same-state counterfactual frames."""
+        cand = torch.cat([pos.unsqueeze(1), negs], dim=1)  # (B, 1+M, F); positive is col 0
+        logits = -(pred.unsqueeze(1) - cand).pow(2).mean(dim=-1) / self.temperature
+        labels = logits.new_zeros(b, dtype=torch.long)
+        loss = F.cross_entropy(logits, labels)
+        acc = (logits.argmax(dim=1) == 0).float().mean()
+        return loss, {"cf_contrastive": loss.item(), "cf_acc": acc.item()}
+
     def __call__(self, out, batch, model):
-        pred = out.pred  # (B, D) — predicted next latent, dynamics(z_t, a_q)
-        pos = out.target.detach()  # (B, D) — teacher(observed next)
         cf = batch.next_cf  # (B, M, C, H, W)
         b, m = cf.shape[0], cf.shape[1]
+        if isinstance(getattr(model, "head", None), PixelDecoder):
+            # PIXEL space: the prediction and the futures ARE frames (or frame-deltas).
+            # Compare directly — high-signal (a 20px move is unmissable) and visible.
+            # The observed next-frame is the positive; the same-state counterfactual
+            # frames are the negatives, in the head's own target space (delta or raw).
+            it = batch.obs[:, -1]
+            neg_frames = cf - it.unsqueeze(1) if model.head.delta else cf
+            pred = out.pred.reshape(b, -1)
+            pos = out.target.detach().reshape(b, -1)
+            negs = neg_frames.reshape(b, m, -1)
+            return self._infonce(pred, pos, negs, b)
+        pred = out.pred  # (B, D) — predicted next latent, dynamics(z_t, a_q)
+        pos = out.target.detach()  # (B, D) — teacher(observed next)
         with torch.no_grad():
             negs = model.teacher(cf.reshape(b * m, *cf.shape[2:])).reshape(b, m, -1)  # (B,M,D)
         if self.delta:

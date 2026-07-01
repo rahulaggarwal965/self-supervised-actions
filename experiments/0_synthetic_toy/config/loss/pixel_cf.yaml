@@ -1,0 +1,37 @@
+# Pixel-delta head (model=minimal_invariant_pixel) + same-state counterfactual contrastive
+# IN PIXEL SPACE. The contrastive requires the predicted frame-delta dynamics(z, a_q) to sit
+# closer to the observed next-frame than to the same-state counterfactual frames. This is the
+# mechanism that (a) trains the INVERSE to encode which action occurred (discovery / NMI) and
+# (b) forces distinct per-action predictions — and unlike the latent version, it operates where
+# the action is a high-signal, unmissable change, so it breaks the mean-seeking symmetry and
+# yields a visible counterfactual. Needs data.counterfactuals=true. Select `loss=pixel_cf`.
+terms:
+  - name: prediction
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.prediction.PredictionLoss
+  - name: vq
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.vq.VQLoss
+      beta: 0.25
+  - name: margin
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.margin.MarginLoss
+      m: 0.002
+  - name: usage
+    weight: 0.1
+    fn:
+      _target_: ssa.losses.usage.UsageLoss
+      sample_weight: 1.0
+      batch_weight: 1.0
+  - name: decorrelation
+    weight: 2.0
+    fn:
+      _target_: ssa.losses.decorrelation.DecorrelationLoss
+  - name: cf_contrastive
+    weight: 5.0
+    fn:
+      _target_: ssa.losses.counterfactual.CounterfactualContrastiveLoss
+      temperature: 0.03

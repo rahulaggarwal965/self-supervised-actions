@@ -1,0 +1,12 @@
+{
+  "note": "LABEL-FREE. loss=ssl_cf with delta target + projection head, cosine InfoNCE weight 15 temp 0.3; model=minimal_invariant_hires_proj, K=6, data.counterfactuals=true, NO supervision. Random-position toy, 5000 steps, seed 0.",
+  "nmi": 0.785,
+  "ari": 0.750,
+  "nmi_position": 0.111,
+  "perplexity": 5.586,
+  "codes_used": 6,
+  "codes_histogram": [70, 232, 216, 125, 227, 154],
+  "action_err": 0.728,
+  "cf_acc": 1.0,
+  "num_codes": 6
+}

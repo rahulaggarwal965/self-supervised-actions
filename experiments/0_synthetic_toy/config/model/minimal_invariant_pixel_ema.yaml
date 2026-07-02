@@ -21,6 +21,7 @@ quantizer:
   dim: ${model.action_dim}
   decay: 0.99
   eps: 1.0e-5
+  reset_dead: false # per-batch reset churns the codebook (6 codes / 4 actions) -> NMI collapse
 dynamics:
   _target_: ssa.models.dynamics.Dynamics
   dim: ${model.dim}

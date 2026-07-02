@@ -50,6 +50,17 @@ class Trainer:
                 step += 1
                 if step >= max_steps:
                     break
+        # a periodic eval fires on step % eval_every inside the loop, but the loop exits
+        # at step == max_steps without ever evaluating there — so the CONVERGED model's
+        # scalars/figures were never logged (only mid-training ones). Always run a final
+        # eval on the trained model so the dashboard reflects the model we actually keep.
+        if eval_fn and eval_every:
+            self.model.eval()
+            scalars, figures = eval_fn(self.model, step)
+            if self.logger:
+                self.logger.log(scalars, step)
+                self.logger.log_figures(figures, step)
+            self.model.train()
 
     def save(self, path) -> None:
         torch.save({"model": self.model.state_dict()}, path)

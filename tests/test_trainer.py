@@ -80,8 +80,10 @@ def test_fit_runs_loop_with_eval_logging_and_restores_train_mode():
     )
     trainer.fit(loader, max_steps=6, eval_every=2, eval_fn=eval_fn, log_every=2)
 
-    assert calls["n"] == 2
-    assert logger.figure_calls == 2
+    # periodic evals at steps 2 and 4, plus one final eval at step 6 (the converged
+    # model) so the dashboard reflects the model we keep — 3 evals total.
+    assert calls["n"] == 3
+    assert logger.figure_calls == 3
     assert model.training is True
     assert 0 in logger.steps
 

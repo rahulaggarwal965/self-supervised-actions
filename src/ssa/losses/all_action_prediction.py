@@ -35,7 +35,7 @@ class AllActionPredictionLoss:
             else:
                 a_pre = model.inverse(z, model.encoder(fut))
             a_q, _ = model.quantizer(a_pre)
-            pred = model.head.predict(model.dynamics(z, a_q))
+            pred = model.head.predict(model.dynamics(z, a_q), it)
             target = fut - it if getattr(model.head, "delta", False) else fut
             total = total + F.mse_loss(pred, target)
         loss = total / a

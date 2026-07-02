@@ -11,7 +11,7 @@ class PredictionHead(nn.Module, ABC):
     """
 
     @abstractmethod
-    def predict(self, feat: Tensor) -> Tensor: ...
+    def predict(self, feat: Tensor, context: Tensor | None = None) -> Tensor: ...
 
     @abstractmethod
     def target(self, batch, model) -> Tensor: ...
@@ -63,7 +63,7 @@ class PixelDecoder(PredictionHead):
         self.net = nn.Sequential(*layers)
         self.out = nn.Conv2d(c, out_ch, 3, padding=1)
 
-    def predict(self, feat: Tensor) -> Tensor:
+    def predict(self, feat: Tensor, context: Tensor | None = None) -> Tensor:
         h = self.fc(feat).view(-1, self.base, self.start, self.start)
         h = self.net(h)  # start -> ... -> size
         out = self.out(h)
@@ -75,10 +75,58 @@ class PixelDecoder(PredictionHead):
         return batch.next_obs
 
 
+class CompositePixelDecoder(PredictionHead):
+    """Predicts the next frame by compositing over the current one.
+
+    ``pred = α·F + (1-α)·I_t`` — a learned RGB frame ``F`` and a soft alpha mask ``α``
+    (both from the dynamics feature). The static scene is copied **verbatim** from ``I_t``
+    through ``(1-α)``, and the network only writes where ``α`` is high (the moved agent).
+    With an L1 penalty on ``α`` (``AlphaSparsityLoss``) the mask stays localized, so the
+    reconstructed next frame is exactly ``I_t`` with the agent relocated — no cyan ghosts,
+    no dropped distractors. Requires the context frame at predict time (passed by the
+    model / eval); without it, falls back to returning ``F``.
+    """
+
+    def __init__(
+        self, dim: int = 256, out_ch: int = 3, base: int = 256, start: int = 8, size: int = 64
+    ) -> None:
+        super().__init__()
+        self.base = base
+        self.start = start
+        self.delta = False  # output is a full frame
+        self._alpha: Tensor | None = None
+        import math
+
+        ups = int(math.log2(size // start))
+        self.fc = nn.Linear(dim, base * start * start)
+        chans = [128, 64, 32, 32][:ups]
+        c = base
+        layers = []
+        for cout in chans:
+            layers.append(_up(c, cout))
+            c = cout
+        self.net = nn.Sequential(*layers)
+        self.to_frame = nn.Conv2d(c, out_ch, 3, padding=1)
+        self.to_alpha = nn.Conv2d(c, 1, 3, padding=1)
+
+    def predict(self, feat: Tensor, context: Tensor | None = None) -> Tensor:
+        h = self.fc(feat).view(-1, self.base, self.start, self.start)
+        h = self.net(h)
+        frame = self.to_frame(h).sigmoid()
+        alpha = self.to_alpha(h).sigmoid()
+        self._alpha = alpha
+        if context is None:
+            return frame
+        return alpha * frame + (1 - alpha) * context
+
+    def target(self, batch, model) -> Tensor:
+        return batch.next_obs
+
+
 class LatentHead(PredictionHead):
     """Predicts the EMA-teacher encoding of the next frame (stop-grad target)."""
 
-    def predict(self, feat: Tensor) -> Tensor:
+    def predict(self, feat: Tensor, context: Tensor | None = None) -> Tensor:
         return feat
 
     def target(self, batch, model) -> Tensor:

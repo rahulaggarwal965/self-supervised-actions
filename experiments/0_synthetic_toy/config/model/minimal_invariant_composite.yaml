@@ -1,0 +1,31 @@
+# Compositing variant: position-invariant inverse + additive dynamics, with a
+# CompositePixelDecoder head that predicts the next frame as α·F + (1-α)·I_t. The static
+# scene is copied verbatim from I_t; the net only writes the moved agent where α is high
+# (kept localized by AlphaSparsityLoss). Removes the cyan ghosts / dropped-distractor
+# artifacts by construction. Select with `model=minimal_invariant_composite`.
+dim: 256
+action_dim: 64
+num_codes: 6
+teacher_momentum: 0.99 # unused by the pixel head, kept so build_model stays uniform
+encoder:
+  _target_: ssa.models.encoder.Encoder
+  in_ch: 3
+  dim: ${model.dim}
+inverse:
+  _target_: ssa.models.inverse.InvariantInverseModel
+  feat_ch: 64
+  feat_level: 2
+  action_dim: ${model.action_dim}
+quantizer:
+  _target_: ssa.models.quantizer.VectorQuantizer
+  num_codes: ${model.num_codes}
+  dim: ${model.action_dim}
+dynamics:
+  _target_: ssa.models.dynamics.Dynamics
+  dim: ${model.dim}
+  action_dim: ${model.action_dim}
+  additive: true
+head:
+  _target_: ssa.models.heads.CompositePixelDecoder
+  dim: ${model.dim}
+  start: 8

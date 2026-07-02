@@ -1,0 +1,40 @@
+# Loss bundle for the compositing head (model=minimal_invariant_composite):
+#  - cf_contrastive: forces the inverse to give distinct actions distinct codes (discovery)
+#  - all_action_prediction: regress each code's composited frame onto its action's real next frame
+#  - alpha_sparsity: keep the compositing mask localized so the static scene is copied from I_t
+#  - vq / margin / usage / decorrelation: codebook health + keep the code off absolute position
+# Needs data.counterfactuals=true. Select `loss=composite`.
+terms:
+  - name: cf_contrastive
+    weight: 4.0
+    fn:
+      _target_: ssa.losses.counterfactual.CounterfactualContrastiveLoss
+      temperature: 0.03
+  - name: all_action_prediction
+    weight: 2.0
+    fn:
+      _target_: ssa.losses.all_action_prediction.AllActionPredictionLoss
+  - name: alpha_sparsity
+    weight: 0.5
+    fn:
+      _target_: ssa.losses.alpha_sparsity.AlphaSparsityLoss
+  - name: vq
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.vq.VQLoss
+      beta: 0.25
+  - name: margin
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.margin.MarginLoss
+      m: 0.002
+  - name: usage
+    weight: 0.1
+    fn:
+      _target_: ssa.losses.usage.UsageLoss
+      sample_weight: 1.0
+      batch_weight: 1.0
+  - name: decorrelation
+    weight: 2.0
+    fn:
+      _target_: ssa.losses.decorrelation.DecorrelationLoss

@@ -63,6 +63,7 @@ class LatentActionModel(nn.Module):
             a_pre = self.inverse(z_ctx, self.encoder(batch.next_obs))
         a_q, vq = self.quantizer(a_pre)
         feat = self.dynamics(z_ctx, a_q)
-        pred = self.head.predict(feat)
+        # pass I_t so a compositing head can copy the static scene and write only the move
+        pred = self.head.predict(feat, batch.obs[:, -1])
         target = self.head.target(batch, self)
         return ModelOutput(pred, target, a_pre, a_q, z_ctx, feat, vq)

@@ -1,0 +1,43 @@
+# Truly label-free bundle: vicreg + decorrelate-code-from-position + forward-selection
+# (make the dynamics need the code). NO action supervision. Intended with
+# model=minimal_invariant_hires and model.num_codes=6. The test of whether we can
+# discover the action self-supervised: forward-selection forces the code to carry the
+# prediction-relevant change; decorrelation keeps that change from being position;
+# what's left is the action. Select with `loss=ssl`.
+terms:
+  - name: prediction
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.prediction.PredictionLoss
+  - name: vq
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.vq.VQLoss
+      beta: 0.25
+  - name: margin
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.margin.MarginLoss
+      m: 0.002
+  - name: usage
+    weight: 0.1
+    fn:
+      _target_: ssa.losses.usage.UsageLoss
+      sample_weight: 1.0
+      batch_weight: 1.0
+  - name: vicreg
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.vicreg.VICRegLoss
+      var_weight: 25.0
+      cov_weight: 1.0
+      gamma: 1.0
+  - name: decorrelation
+    weight: 2.0
+    fn:
+      _target_: ssa.losses.decorrelation.DecorrelationLoss
+  - name: forward_selection
+    weight: 1.0
+    fn:
+      _target_: ssa.losses.forward_selection.ForwardSelectionLoss
+      temperature: 0.1

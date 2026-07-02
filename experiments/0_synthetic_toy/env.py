@@ -35,7 +35,11 @@ class ToyActionEnv:
         self._box(img, pos[0], pos[1], self.agent, (1.0, 0.0, 0.0))
         return img
 
-    def sample(self):
+    def _next_frame(self, pos, a, distractors):
+        next_pos = np.clip(pos + self.actions[a], 0, self.size - self.agent)
+        return self._render(next_pos, distractors)
+
+    def sample(self, counterfactuals: bool = False):
         lo, hi = self.step, self.size - self.agent - self.step
         pos = self.start.copy() if self.start is not None else self.rng.integers(lo, hi, size=2)
         distractors = [
@@ -46,40 +50,57 @@ class ToyActionEnv:
             for _ in range(self.n_distractors)
         ]
         a = int(self.rng.integers(0, len(self.actions)))
-        next_pos = np.clip(pos + self.actions[a], 0, self.size - self.agent)
         cur = self._render(pos, distractors)
         obs = np.stack([cur] * self.history, axis=0)  # (T, 3, H, W)
-        nxt = self._render(next_pos, distractors)
-        return obs, nxt, a
+        nxt = self._next_frame(pos, a, distractors)
+        if not counterfactuals:
+            return obs, nxt, a
+        # next frames under the OTHER actions (same state) — label-free negatives:
+        # one code cannot predict all of these different futures, so a contrastive
+        # forward objective against them cannot be satisfied by codebook collapse.
+        others = [ai for ai in range(len(self.actions)) if ai != a]
+        ncf = np.stack([self._next_frame(pos, ai, distractors) for ai in others])  # (A-1, 3, H, W)
+        return obs, nxt, a, ncf
 
 
 class ToyDataset(Dataset):
     """Pre-generates ``size`` transitions deterministically from a seed."""
 
-    def __init__(self, size=4096, seed=0, env_cfg=None, **env_kwargs):
+    def __init__(self, size=4096, seed=0, env_cfg=None, counterfactuals=False, **env_kwargs):
         # ``size`` is the number of transitions to generate. Environment settings
         # may be passed either as loose keyword args (``**env_kwargs``) or as a
         # single ``env_cfg`` mapping; the latter avoids a keyword collision when
         # the env's own grid side length (also called ``size``) must be configured.
+        # ``counterfactuals``: also store the next frames under the other actions
+        # (same state), as label-free negatives for a contrastive forward objective.
         if env_cfg:
             env_kwargs = {**env_cfg, **env_kwargs}
         env = ToyActionEnv(seed=seed, **env_kwargs)
-        obs, nxt, act = [], [], []
+        self.counterfactuals = counterfactuals
+        obs, nxt, act, ncf = [], [], [], []
         for _ in range(size):
-            o, n, a = env.sample()
+            if counterfactuals:
+                o, n, a, c = env.sample(counterfactuals=True)
+                ncf.append(c)
+            else:
+                o, n, a = env.sample()
             obs.append(o)
             nxt.append(n)
             act.append(a)
         self.obs = np.stack(obs)
         self.next = np.stack(nxt)
         self.act = np.asarray(act)
+        self.next_cf = np.stack(ncf) if counterfactuals else None  # (N, A-1, 3, H, W)
 
     def __len__(self) -> int:
         return len(self.act)
 
     def __getitem__(self, i: int) -> dict:
-        return {
+        item = {
             "obs": torch.from_numpy(self.obs[i]),
             "next_obs": torch.from_numpy(self.next[i]),
             "action": torch.tensor(int(self.act[i]), dtype=torch.long),
         }
+        if self.next_cf is not None:
+            item["next_cf"] = torch.from_numpy(self.next_cf[i])  # (A-1, 3, H, W)
+        return item

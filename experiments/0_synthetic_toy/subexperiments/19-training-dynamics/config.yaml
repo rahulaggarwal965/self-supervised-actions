@@ -1,0 +1,5 @@
+# not a new config — a fix + characterization of the training loop.
+fix: src/ssa/train/trainer.py  # Trainer.fit now runs a final eval at step==max_steps
+verified_run: 32-pixel-clean-fixed  # model=minimal_invariant_pixel +model.head.start=8 loss=pixel_clean
+                                    # data.counterfactuals=true data.env.step=20 train.max_steps=8000 train.eval_every=2000
+reference: docs/pipeline-and-losses.md  # sec 6 (dynamics), sec 8 (stabilization levers)

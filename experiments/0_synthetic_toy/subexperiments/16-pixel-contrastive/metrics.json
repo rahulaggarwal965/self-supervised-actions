@@ -1,0 +1,8 @@
+{
+  "note": "Pixel-delta head; compare MSE-only vs pixel-space same-state contrastive vs Sinkhorn coverage. Label-free, step=20, K=6.",
+  "pixel_mse_only": {"loss": "pixel", "nmi": 0.004, "codes_used": 6, "outcome": "4-way mean blur, code ignored"},
+  "pixel_contrastive": {"loss": "pixel_cf", "nmi": 0.819, "codes_used": 6,
+    "per_code_direction_pct": {"0": "L96", "1": "L99", "2": "mixed", "3": "D100", "4": "U99", "5": "R98"},
+    "outcome": "distinct directional counterfactuals (first action-conditional); blobby agent"},
+  "sinkhorn_coverage": {"loss": "pixel_cov", "nmi": 0.005, "outcome": "no symmetry-break from mean start; does not train inverse"}
+}

@@ -21,8 +21,13 @@ Procedural sprite toy (one red agent moving L/R/U/D + static distractors), K=16,
 | 12 | [+counterfactual contrastive](12-counterfactual/) | predict observed next over real other-action futures (label-free) | **best pure-SSL, collapse-proof (6 codes), position-free — but plateaus** | 0.381 |
 | 13 | [+delta target + projection](13-delta-contrastive/) | contrast the *change* in a projected subspace (label-free) | **label-free action discovery — best single run** | 0.785 |
 | 14 | [stabilization](14-stabilization/) | seed sweep · two-stage · loss rebalance (label-free) | **robust ~0.56–0.70; 0.785 was high-variance; clean rep at predw10** | 0.70 |
+| 15 | [additive dynamics](15-additive-dynamics/) | additive `z+T(code)` + decoder-free diagnosis (step=20) | **fault is the forward model (distinct-but-wrong latents), not the decoder; action swamped in latent** | 0.51–0.71 |
+| 16 | [pixel contrastive](16-pixel-contrastive/) | predict + contrast in **pixel** space (high-signal) | **breakthrough — first action-conditional counterfactual (distinct directional moves)** | 0.82 |
+| 17 | [all-action supervision](17-all-action-supervision/) | + per-code real-frame targets for every action | **clean, distinct, correct per-code moves — discovery + counterfactual solved** | **0.89–0.95** |
+| 18 | [counterfactual fidelity](18-counterfactual-fidelity/) | finer decoder · L1 sparsity · full-frame · compositing | cosmetic; L1 is a knife-edge, full-frame drops distractors, compositing = structural fix | 0.63–0.95 |
+| 19 | [training dynamics](19-training-dynamics/) | diagnose curves; fix eval-logging | **eval-logging bug hid results; learning is a sharp, seed-dependent VQ phase transition (grokking)** | — |
 
-(Exp 7 sanity: the same invariant model on the fixed-start setting reaches NMI **0.648** ≥ the control — the inverse is sound; the random-position gap is unchanged because the *encoder*, not just the head, carries position. Exp 8: at 16×16 the agent's 6-px move is resolvable; NMI(code,position) finally drops 0.067→0.044 while NMI(code,action) rises 0.027→0.364 — partial success, still < the 0.5 bar.)
+(Exps 15–19 move to a **larger action (`step=20`)** and a **pixel-delta head**; see the "step-20 + pixel-space" update at the bottom. Exp 7 sanity: the same invariant model on the fixed-start setting reaches NMI **0.648** ≥ the control — the inverse is sound; the random-position gap is unchanged because the *encoder*, not just the head, carries position. Exp 8: at 16×16 the agent's 6-px move is resolvable; NMI(code,position) finally drops 0.067→0.044 while NMI(code,action) rises 0.027→0.364 — partial success, still < the 0.5 bar.)
 
 ## Headline
 
@@ -113,3 +118,30 @@ The label-free fix must make the action *necessary for prediction*. [Exp 11](11-
 **The residual tension.** The action's true latent effect on this toy is small (a 6-px move), so there is an inherent conflict: a strong contrastive gives high code↔action NMI but a degraded forward model (poor counterfactual), while a strong prediction gives a clean forward model but a nearly action-agnostic dynamics (tiny no-action gap). The **inverse discovers the action** (the goal); a forward model that is simultaneously accurate *and* strongly action-conditional is the harder, partially-open problem — likely relaxed on a harder toy with a larger action-effect (the natural next stage).
 
 Verdict vs. Stage-0 (NMI > 0.8): **met semi-supervised (0.94, Exp 9); label-free action discovery achieved and robust at ~0.56–0.70 (best 0.785), past the 0.62 control — the project's novelty demonstrated, though not a stable 0.8.** The arc: position control validates the mechanism (Exp 6, 0.62) → resolution matters (Exp 8, 0.36) → 2.5% labels solve but carry it (Exp 9/10) → forward-selection collapses (Exp 11) → counterfactual contrastive plateaus (Exp 12) → delta + projection breaks it label-free (Exp 13, best 0.785) → stabilization shows it's a high-variance ~0.6 mechanism with a clean-rep option (Exp 14). Next: variance reduction (compositional/inverse-cycle constraints), then a harder toy where the action-effect is large enough to resolve the accuracy-vs-conditionality tension.
+
+## Update — step-20 + pixel-space (Exp 15–19): the counterfactual solved
+
+The synthesis above documents the **label-free-latent** phase (Exp 0–14), which left the *forward model /
+counterfactual* as the "partially-open" problem. Exp 15–19 close it, by acting on exactly the lever that
+paragraph names — the action's effect was too small.
+
+- **The action was low-variance in *latent* space, and that was the whole problem.** A decoder-free
+  diagnosis ([Exp 15](15-additive-dynamics/)) showed the forward model produces *distinct-but-wrong*
+  next-latents (swap-gap 93%, cover-err 269%): its prediction error (~8) dwarfs the action's latent
+  footprint (~2.9). The decoder was blameless. Additive dynamics halved the error but couldn't win in a
+  space where the signal is that small.
+- **Predicting in pixel space, where a 20px move is high-signal, breaks it.** A pixel-delta head + a
+  **same-state contrastive in pixel space** ([Exp 16](16-pixel-contrastive/)) gives the first genuinely
+  action-conditional counterfactual — distinct, directionally-correct per-code moves, NMI **0.82**. (MSE
+  alone still collapses to the mean; the contrastive is load-bearing.)
+- **Adding per-code real-frame targets makes it clean** ([Exp 17](17-all-action-supervision/)): contrastive
+  (discriminate *which* action) + all-action supervision (render *that* action's real move) → NMI
+  **0.89–0.95**, 100%-consistent per-code directions. Discovery **and** a faithful counterfactual, label-free.
+- Render **fidelity** ([Exp 18](18-counterfactual-fidelity/)) is a separate decoder-structure problem
+  (compositing head is the fix), not a discovery problem.
+- **Two process findings** ([Exp 19](19-training-dynamics/)): an eval-logging bug made every run *look*
+  static on wandb (only mid-training figures were logged — now fixed); and learning is a **sharp,
+  seed-dependent VQ phase transition** (grokking + codebook reorganization) — the real remaining fragility.
+
+Full math + dynamics: [`docs/pipeline-and-losses.md`](../../../docs/pipeline-and-losses.md). **Remaining work
+is stabilizing the transition** (EMA codebook / temperature annealing / warmup), not discovery or fidelity.

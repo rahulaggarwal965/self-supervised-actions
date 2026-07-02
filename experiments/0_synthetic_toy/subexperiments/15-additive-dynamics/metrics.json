@@ -1,0 +1,18 @@
+{
+  "note": "Additive dynamics + decoder-free latent diagnosis. Label-free, step=20, K=6, counterfactuals=true.",
+  "latent_diagnosis_on_baseline_s20cf8": {
+    "future_spread": 2.93,
+    "noop_dist": 4.05,
+    "swap_gap": 2.73, "swap_gap_pct_of_future_spread": 93,
+    "cover_err": 7.88, "cover_err_pct_of_future_spread": 269,
+    "observed_transition_err": 8.10, "observed_transition_err_pct": 276,
+    "verdict": "distinct-but-wrong latents -> fault is the forward model, not the decoder"
+  },
+  "additive_fix": {
+    "cover_err": 3.69, "cover_err_pct": 212, "observed_err": 3.92, "observed_err_pct": 226,
+    "future_spread": 1.74,
+    "nmi_additive_pred1": 0.71, "nmi_predw10": 0.51, "nmi_residual_predw10": 0.59,
+    "baseline_s20cf8_nmi": 0.85,
+    "note": "abs error ~2x lower but ratio unchanged; counterfactual still static; NMI from wandb (mid-training, see exp19)"
+  }
+}

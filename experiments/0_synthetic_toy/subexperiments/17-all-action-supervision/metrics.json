@@ -1,0 +1,9 @@
+{
+  "note": "All-action direct supervision, alone vs combined with the pixel contrastive. Label-free, step=20, K=6.",
+  "all_action_only": {"loss": "pixel_allact", "nmi": 0.005, "outcome": "mean collapse (low-variance action)"},
+  "contrastive_plus_all_action": {"loss": "pixel_cf_allact", "nmi": 0.892, "codes_used": 6,
+    "per_code_direction": {"0": "L", "1": "U", "2": "D", "3": "R", "4": "L", "5": "U"},
+    "direction_consistency_pct": 100,
+    "outcome": "distinct, directionally-correct per-code moves; best discovery+counterfactual"},
+  "longer_logging_fixed_run": {"name": "32-pixel-clean-fixed", "max_steps": 8000, "nmi": 0.911}
+}

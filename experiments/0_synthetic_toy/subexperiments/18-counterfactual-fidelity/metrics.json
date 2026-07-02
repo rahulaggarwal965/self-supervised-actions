@@ -1,0 +1,7 @@
+{
+  "note": "Render-fidelity cleanup on the pixel-delta counterfactual (discovery already solved). step=20, K=6.",
+  "finer_decoder_plus_L1": {"loss": "pixel_clean", "model_head_start": 8, "nmi": 0.945, "outcome": "crisp agent, faint ghosts, washed distractors"},
+  "L1_sweep_delta_sparsity": {"w1.0": {"nmi": 0.945, "effect": "faint ghosts"}, "w2.5": {"nmi": 0.775, "effect": "agent duplicates (old not erased)"}, "w5.0": {"nmi": 0.006, "effect": "move erased, collapse"}},
+  "full_frame_head": {"delta": false, "nmi": 0.634, "outcome": "no cyan but distractors dropped"},
+  "compositing_head": {"status": "implemented, not yet run at length", "form": "alpha*F + (1-alpha)*I_t", "note": "structural fix: no ghosts / no dropped distractors by construction"}
+}

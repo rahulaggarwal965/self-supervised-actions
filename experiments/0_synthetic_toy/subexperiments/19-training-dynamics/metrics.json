@@ -1,0 +1,10 @@
+{
+  "note": "Methodological: eval-logging bug + phase-transition characterization. See docs/pipeline-and-losses.md sec 6.",
+  "eval_logging_bug": {"symptom": "only steps 2000,4000 logged for a 6000-step run; final eval never ran",
+    "cause": "eval fired on step%eval_every before increment; loop breaks at step==max_steps", "fix": "final eval always runs at end of fit"},
+  "phase_transition": {"nmi_at_2000": 0.003, "nmi_at_4000": 0.003, "nmi_at_6000": 0.9,
+    "cf_acc_plateau": 0.25, "cf_acc_snaps_to_1_near_step": 5300,
+    "vq_spike": "0.005 -> 2.71", "grad_norm_spike": "0.3 -> 10.1", "total_loss": "5.44 (plateau) -> 3.44 (settled, lower)",
+    "steps_with_grad_norm_gt_3": [5220, 5240, 5300],
+    "transition_step_across_runs": [2000, 4500, 5300], "note": "seed-dependent -> source of NMI seed variance"}
+}

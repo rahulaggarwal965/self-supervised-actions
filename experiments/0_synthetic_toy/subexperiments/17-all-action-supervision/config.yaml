@@ -1,0 +1,7 @@
+# reproduce (label-free, step=20, K=6, counterfactuals=true)
+model: minimal_invariant_pixel
+loss: pixel_cf_allact                  # contrastive (discriminate) + all_action (per-code frame targets); compare loss=pixel_allact (alone -> collapses)
+overrides:
+  - model.num_codes=6
+  - data.counterfactuals=true
+  - data.env.step=20

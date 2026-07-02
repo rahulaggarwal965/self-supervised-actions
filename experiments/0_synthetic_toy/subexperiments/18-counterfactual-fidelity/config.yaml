@@ -1,0 +1,10 @@
+# reproduce (label-free, step=20, K=6, counterfactuals=true)
+model: minimal_invariant_pixel
+loss: pixel_clean                      # pixel_cf_allact + delta_sparsity (L1 on the change)
+overrides:
+  - model.num_codes=6
+  - +model.head.start=8                # finer decoder bottleneck
+  - data.counterfactuals=true
+  - data.env.step=20
+# variants: loss.terms.2.weight=2.5|5.0 (L1 sweep); model.head.delta=false (full-frame);
+#           model=minimal_invariant_composite loss=composite (compositing head)

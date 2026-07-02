@@ -1,0 +1,7 @@
+# reproduce (label-free, step=20, K=6, counterfactuals=true)
+model: minimal_invariant_pixel        # PixelDecoder delta head, additive dynamics
+loss: pixel_cf                         # the breakthrough; compare loss=pixel (MSE only) and loss=pixel_cov (Sinkhorn)
+overrides:
+  - model.num_codes=6
+  - data.counterfactuals=true
+  - data.env.step=20

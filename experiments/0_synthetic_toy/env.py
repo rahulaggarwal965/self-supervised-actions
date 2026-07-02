@@ -10,7 +10,10 @@ class ToyActionEnv:
     one of four directions (the hidden action); optional static distractor
     squares never move. Renders to ``(3, size, size)`` float frames in [0,1]."""
 
-    def __init__(self, size=64, agent=6, step=6, n_distractors=2, history=1, seed=0, start=None):
+    def __init__(
+        self, size=64, agent=6, step=6, n_distractors=2, history=1, seed=0, start=None,
+        directions=4,
+    ):
         self.size = size
         self.agent = agent
         self.step = step
@@ -20,7 +23,14 @@ class ToyActionEnv:
         # action); None = random spawn. A control for action discovery.
         self.start = None if start is None else np.array(start, dtype=int)
         self.rng = np.random.default_rng(seed)
-        self.actions = np.array([(-step, 0), (step, 0), (0, -step), (0, step)], dtype=int)
+        # ``directions``: 4 = cardinals (L/R/U/D); 8 adds the diagonals at ~equal
+        # magnitude (d = step/sqrt2), a harder action space that stresses the discrete
+        # bottleneck (8 codes) and the counterfactual (8 distinct moves).
+        card = [(-step, 0), (step, 0), (0, -step), (0, step)]
+        if directions == 8:
+            d = int(round(step / 2**0.5))
+            card += [(-d, -d), (d, -d), (-d, d), (d, d)]
+        self.actions = np.array(card, dtype=int)
 
     def _box(self, img, x, y, s, color):
         x0 = int(np.clip(x, 0, self.size - s))

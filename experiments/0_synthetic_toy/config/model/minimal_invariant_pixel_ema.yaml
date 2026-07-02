@@ -1,0 +1,32 @@
+# Like minimal_invariant_pixel, but the VQ bottleneck uses EMA codebook updates
+# (EMAVectorQuantizer) instead of the gradient-updated codebook. Goal: make the discovery
+# phase transition earlier/gentler and reduce seed variance (see subexp 19). Select with
+# `model=minimal_invariant_pixel_ema`.
+dim: 256
+action_dim: 64
+num_codes: 6
+teacher_momentum: 0.99 # unused by the pixel head
+encoder:
+  _target_: ssa.models.encoder.Encoder
+  in_ch: 3
+  dim: ${model.dim}
+inverse:
+  _target_: ssa.models.inverse.InvariantInverseModel
+  feat_ch: 64
+  feat_level: 2
+  action_dim: ${model.action_dim}
+quantizer:
+  _target_: ssa.models.quantizer_ema.EMAVectorQuantizer
+  num_codes: ${model.num_codes}
+  dim: ${model.action_dim}
+  decay: 0.99
+  eps: 1.0e-5
+dynamics:
+  _target_: ssa.models.dynamics.Dynamics
+  dim: ${model.dim}
+  action_dim: ${model.action_dim}
+  additive: true
+head:
+  _target_: ssa.models.heads.PixelDecoder
+  dim: ${model.dim}
+  delta: true

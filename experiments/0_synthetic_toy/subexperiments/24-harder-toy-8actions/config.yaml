@@ -1,0 +1,10 @@
+# harder toy: 8 actions (cardinals + diagonals)
+model: minimal_invariant_pixel
+loss: pixel_cf_allact
+overrides:
+  - model.num_codes=8
+  - +model.head.start=16
+  - data.counterfactuals=true
+  - +data.env.directions=8
+  - data.env.step=20
+  - train.max_steps=10000

@@ -1,0 +1,7 @@
+{
+  "note": "Harder toy: 8 actions (4 cardinals + 4 diagonals at ~equal magnitude). Pixel-delta head start=16, pixel_cf_allact, step=20, K=8, 10000 steps, 3 seeds.",
+  "nmi_seeds": [0.537, 0.712, 0.615], "nmi_mean": 0.621, "ari_seed0": 0.318,
+  "codes_used": "8/8", "agent_area_median_px": 38,
+  "vs_4action_baseline": {"nmi_4action": "0.89-0.95", "nmi_8action": 0.621},
+  "verdict": "partial scaling: render stays crisp + all codes used, but discovery degrades (0.9 -> 0.62) — several codes conflate 2 actions (diagonals vs cardinals). K=8 gives no code slack."
+}

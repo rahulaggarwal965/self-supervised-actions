@@ -35,3 +35,8 @@ Partial scaling to 8 actions demonstrated (crisp render, NMI ~0.62). Natural lev
 **more codes** (`K=12–16` for slack, the lever that helped at 4 actions), longer training, or finer feature
 resolution so diagonals are distinguishable. Broader harder-toy directions (temporally-extended / momentum
 actions, multi-object interactions) remain open for the next phase.
+
+
+## Update — K=12 (code slack) scales it
+
+Re-running with **K=12** (slack, like the 1.5× that helped at 4 actions): NMI **0.788 mean** (0.637 / 0.816 / **0.912**), ARI up to 0.46, crisp render. Code slack largely closes the 8-action gap — the best seed (0.91) essentially discovers all 8 actions. So the method **scales to a larger action space given enough codes**; K=8 (exact) was just too tight.

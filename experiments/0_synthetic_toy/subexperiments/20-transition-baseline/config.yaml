@@ -1,0 +1,8 @@
+# baseline discovery config for the fragility sweep (vary seed=0..3)
+model: minimal_invariant_pixel
+loss: pixel_cf_allact
+overrides:
+  - model.num_codes=6
+  - data.counterfactuals=true
+  - data.env.step=20
+  - train.max_steps=8000

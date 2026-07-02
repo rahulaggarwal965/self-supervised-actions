@@ -1,0 +1,8 @@
+{
+  "note": "Seed sweep of the best discovery config (pixel-delta head + pixel_cf_allact) to quantify transition fragility. step=20, K=6, 8000 steps, bench.",
+  "cmp_base_4seeds": {"nmi": [0.898, 0.946, 0.892, 0.896], "nmi_mean": 0.908, "nmi_sd": 0.022,
+    "transition_steps": [1720, 1940, 1720, 3500], "all_transitioned": true},
+  "all_baseline_seeds_run": {"note": "7/8 landed ~0.89-0.95; one gave 0.666 (partial transition)"},
+  "config_specificity": {"pixel_cf_allact_transition": "~1800 (early, reliable)", "pixel_clean_transition": "~5300 (delta_sparsity delays it)"},
+  "verdict": "best config is robust (NMI 0.91+/-0.02, reliable early transition); severe fragility was pixel_clean-specific"
+}

@@ -1,0 +1,6 @@
+{
+  "note": "Finer decoder bottleneck (PixelDecoder start=16 -> 16x16, vs start=8) on the delta head. loss=pixel_cf_allact, step=20, K=6, 8000 steps.",
+  "start16": {"nmi": 0.945, "agent_red_area_median_px": 36, "note": "crisp 6x6 agent (=36px); distinct correct per-code moves; distractors preserved; faint cyan ghost remains"},
+  "start8_reference_subexp17": {"nmi": "0.89-0.95", "note": "blobby agent (oversized red region)"},
+  "verdict": "the blobby agent was DECODER-resolution-limited, not latent-limited. start=16 renders a crisp agent AND keeps NMI 0.945. Counterfactual now crisp + distinct + directionally correct."
+}

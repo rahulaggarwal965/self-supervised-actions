@@ -1,0 +1,9 @@
+# finer decoder bottleneck for a crisp agent
+model: minimal_invariant_pixel
+loss: pixel_cf_allact
+overrides:
+  - model.num_codes=6
+  - +model.head.start=16   # 16x16 decoder bottleneck (vs default 8); crisp 6px agent
+  - data.counterfactuals=true
+  - data.env.step=20
+  - train.max_steps=8000

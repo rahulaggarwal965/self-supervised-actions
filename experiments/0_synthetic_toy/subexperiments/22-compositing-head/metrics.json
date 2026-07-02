@@ -1,0 +1,7 @@
+{
+  "note": "Compositing head pred=alpha*F+(1-alpha)*I_t to remove delta-head cyan ghosts. loss=composite, step=20, K=6, 8000 steps.",
+  "bug_found_and_fixed": "CompositePixelDecoder isn't a PixelDecoder subclass -> cf_contrastive took the latent branch and crashed (cat 5D frame vs 3D latents). Fixed: route by hasattr(head,'delta').",
+  "alpha_sparsity_sweep": {"0.5": {"nmi": 0.003, "outcome": "collapse: copies I_t (alpha->0), agent never moves"}, "0.1": {"nmi": 0.774, "outcome": "distinct correct moves, NO cyan ghosts, distractors mostly preserved"}, "0.0": {"nmi": 0.672}},
+  "vs_delta_head_subexp17": {"delta_nmi": "0.89-0.95 (faint cyan ghosts)", "composite_alpha01_nmi": "0.774 (no cyan, cleaner bg)"},
+  "verdict": "composite trades ~0.12 NMI for a cleaner background; delta head remains higher-NMI. Blobby agent (coarse decoder) is the shared fidelity ceiling."
+}

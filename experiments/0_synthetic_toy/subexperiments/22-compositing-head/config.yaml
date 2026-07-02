@@ -1,0 +1,9 @@
+# compositing head: pred = alpha*F + (1-alpha)*I_t (copies scene, writes only the moved agent)
+model: minimal_invariant_composite
+loss: composite
+overrides:
+  - model.num_codes=6
+  - data.counterfactuals=true
+  - data.env.step=20
+  - loss.terms.2.weight=0.1   # alpha_sparsity: 0.5 collapses to copy-I_t; 0.1 works; 0.0 slightly worse
+  - train.max_steps=8000

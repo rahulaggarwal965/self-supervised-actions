@@ -1,0 +1,7 @@
+{
+  "note": "EMA codebook stabilization attempt vs gradient-codebook baseline. pixel_cf_allact, step=20, K=6, 8000 steps.",
+  "ema_reset_dead_true": {"nmi_seeds": [0.007, 0.044, 0.076], "outcome": "collapse — per-batch dead-code reset churns the codebook (6 codes / 4 actions)"},
+  "ema_reset_dead_false": {"nmi_mean": 0.805, "nmi_sd": 0.089, "nmi_range": [0.683, 0.892], "transition_steps": [2040, 4480, 4740, 5640], "transition_mean": 4225},
+  "baseline_gradient_codebook": {"nmi_mean": 0.908, "nmi_sd": 0.022, "nmi_range": [0.892, 0.946], "transition_steps": [1720, 1720, 1940, 3500], "transition_mean": 2220},
+  "verdict": "EMA is WORSE — later transition + higher variance. Gradient codebook's fast adaptation makes the transition early. EMA out."
+}

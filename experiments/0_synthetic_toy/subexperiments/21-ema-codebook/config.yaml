@@ -1,0 +1,9 @@
+# EMA codebook quantizer (models/quantizer_ema.py). reset_dead=false is required
+# (true collapses). Compared against the gradient-codebook baseline.
+model: minimal_invariant_pixel_ema   # EMAVectorQuantizer, decay=0.99, reset_dead=false
+loss: pixel_cf_allact
+overrides:
+  - model.num_codes=6
+  - data.counterfactuals=true
+  - data.env.step=20
+  - train.max_steps=8000

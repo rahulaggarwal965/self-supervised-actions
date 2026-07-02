@@ -17,6 +17,7 @@ from env import ToyDataset  # noqa: E402
 from ssa.data.batch import transition_collate  # noqa: E402
 from ssa.eval.clustering import nmi_ari  # noqa: E402
 from ssa.eval.decoder_probe import (  # noqa: E402
+    decoded_action_delta_figure,
     decoded_counterfactual_figure,
     train_decoder_probe,
 )
@@ -138,8 +139,14 @@ def main(cfg):
     # to render the predicted next-latents back to pixels for a counterfactual.
     if isinstance(model.head, LatentHead):
         probe = train_decoder_probe(model, eval_loader, device, steps=cfg.train.probe_steps)
-        fig = decoded_counterfactual_figure(model, probe, eval_ds[0]["obs"])
-        logger.log_figures({"counterfactual/decoded": fig}, cfg.train.max_steps)
+        obs0 = eval_ds[0]["obs"]
+        logger.log_figures(
+            {
+                "counterfactual/decoded": decoded_counterfactual_figure(model, probe, obs0),
+                "counterfactual/decoded_delta": decoded_action_delta_figure(model, probe, obs0),
+            },
+            cfg.train.max_steps,
+        )
     trainer.save("model.pt")
     logger.finish()
 

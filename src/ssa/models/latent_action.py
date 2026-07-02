@@ -48,8 +48,11 @@ class LatentActionModel(nn.Module):
         f_ctx = self.encoder.features(batch.obs[:, -1])
         z_ctx = self.encoder.project(f_ctx)
         if getattr(self.inverse, "spatial", False):
-            # position-invariant: action from the inter-frame feature-map diff
-            a_pre = self.inverse(f_ctx, self.encoder.features(batch.next_obs))
+            # position-invariant: action from the inter-frame feature-map diff,
+            # read at the inverse's chosen encoder level (None = final map)
+            lvl = getattr(self.inverse, "feat_level", None)
+            f_t = f_ctx if lvl is None else self.encoder.features(batch.obs[:, -1], lvl)
+            a_pre = self.inverse(f_t, self.encoder.features(batch.next_obs, lvl))
         else:
             a_pre = self.inverse(z_ctx, self.encoder(batch.next_obs))
         a_q, vq = self.quantizer(a_pre)

@@ -14,8 +14,9 @@ Procedural sprite toy (one red agent moving L/R/U/D + static distractors), K=16,
 | 5 | [+delta-code](5-delta-code/) | code from Δz only | codes encode **position**, not action (confirmed) | 0.013 |
 | 6 | [fixed-start **control**](6-fixed-start/) | pin agent position | **action discovered** once position decoupled | **0.618** |
 | 7 | [+invariant inverse](7-invariant/) | action from feature-diff + global avg pool | translation-invariant *head* insufficient — codes still track position | 0.027 |
+| 8 | [+higher-res features](8-invariant-hires/) | read action from 16×16 (not 4×4) map | **resolution was a real obstacle** — NMI ~13×, position NMI drops | **0.364** |
 
-(Exp 7 sanity: the same invariant model on the fixed-start setting reaches NMI **0.648** ≥ the control — the inverse is sound; the random-position gap is unchanged because the *encoder*, not just the head, carries position.)
+(Exp 7 sanity: the same invariant model on the fixed-start setting reaches NMI **0.648** ≥ the control — the inverse is sound; the random-position gap is unchanged because the *encoder*, not just the head, carries position. Exp 8: at 16×16 the agent's 6-px move is resolvable; NMI(code,position) finally drops 0.067→0.044 while NMI(code,action) rises 0.027→0.364 — partial success, still < the 0.5 bar.)
 
 ## Headline
 
@@ -83,12 +84,17 @@ The natural fix is to make action inference position-invariant. [Exp 7](7-invari
 
 The lesson: **invariance in the action head ≠ position-invariance in practice.** The pool is invariant to *clean spatial shifts of the feature map*, but the agent at different absolute positions does not produce shifted-copy feature maps in a generic 4×4-downsampled CNN, and the 6-px move is *sub-feature-cell*. Position lives in the **encoder**, so it must be fixed there.
 
+[Exp 8](8-invariant-hires/) acted on the sub-cell half of that diagnosis: read the action from a **16×16** map instead of 4×4. This **worked, partially** — `NMI(code, action)` jumped 0.027 → **0.364** (~13×) and, for the first time, `NMI(code, position)` **dropped** (0.067 → 0.044). Resolution was a genuine obstacle. But pooling caps out below the 0.5 bar: global-average-pool discards the spatial *peak* that encodes the displacement, and the strided CNN remains only approximately shift-equivariant.
+
 ## Where this leaves us
 
-The full recipe **works once position is decoupled** (control: NMI 0.62, ARI 0.39, large gap); the obstacle on the random-position toy is encoder-level position entanglement, and a translation-invariant *head* (Exp 7) is insufficient. Next, in order of expected leverage:
+The recipe **works once position is decoupled** (control: NMI 0.62); on the random-position toy, higher-resolution action features get us a third of the way (NMI 0.36) and confirm the resolution + position-entanglement diagnosis. A `research/` literature review surveys the approaches; the ranked next moves (cheapest first):
 
-1. **Higher-resolution action features** — infer the action from an earlier, finer encoder map (e.g. 16×16) so the 6-px move is resolvable. Cheapest next experiment, directly motivated by Exp 7's sub-cell diagnosis.
-2. **Object-centric / slot encoder** — factor the scene into object slots with explicit positions; the action is the *relative* change of the agent slot. Position-invariance enforced by the encoder, not just the pool. The principled build.
-3. **Sweep toward NMI > 0.8 in the control** (K, VICReg/margin weights, longer training) — the control sits at 0.62; some gap is residual distractor entanglement and ~4-codes-per-action, both tunable.
+1. **Anti-aliased downsampling** (BlurPool / APS) so the feature-difference is a clean translated delta — directly attacks the residual aliasing Exp 8 leaves on the table.
+2. **Explicit displacement readout** — soft-argmax cross-correlation / phase correlation between the two feature maps → a continuous, sub-pixel (Δx, Δy) that is translation-equivariant *by construction*; quantize that. The literature's predicted ceiling-raiser over pooling.
+3. **Near-free objective/bottleneck levers** — shrink the codebook (K=16 → ~6, à la Genie), a **selectivity / decorrelate-code-from-position** loss (reuses our VICReg covariance machinery), or ~2.5% **action supervision** (free in our synthetic toy; LAOM reports +4.2×).
+4. **Object-centric / agent-slot encoder** (C-SWM-style additive `z+Δz`, or slots → pick-agent-slot) — the principled, heavier build; position-invariance enforced by the encoder.
 
-Verdict vs. Stage-0 (NMI > 0.8): **not yet met; mechanism validated, position-invariance still open.** The control proves the method discovers actions (NMI 0.62) when position is decoupled; Exp 7 shows a translation-invariant action head does not transfer that to the random-position toy, sharpening the next step to a position-invariant *encoder* (finer action features or object-centric slots).
+See [`research/`](../../../research/) for the surveyed evidence behind each.
+
+Verdict vs. Stage-0 (NMI > 0.8): **not yet met; mechanism validated, position-invariance partially addressed.** The control proves the method discovers actions (0.62) when position is decoupled; Exp 7→8 show that resolution matters (0.027→0.36) but a pooled head caps out, pointing to an explicit displacement readout or an object-centric encoder next.

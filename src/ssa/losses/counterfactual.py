@@ -1,8 +1,6 @@
 import torch
 import torch.nn.functional as F
 
-from ssa.models.heads import PixelDecoder
-
 
 class CounterfactualContrastiveLoss:
     """Make the action necessary — against *real* counterfactual futures.
@@ -61,7 +59,9 @@ class CounterfactualContrastiveLoss:
     def __call__(self, out, batch, model):
         cf = batch.next_cf  # (B, M, C, H, W)
         b, m = cf.shape[0], cf.shape[1]
-        if isinstance(getattr(model, "head", None), PixelDecoder):
+        # any pixel-space head (PixelDecoder or CompositePixelDecoder) exposes `.delta`;
+        # LatentHead does not. Route pixel heads to the frame-space contrastive.
+        if hasattr(getattr(model, "head", None), "delta"):
             # PIXEL space: the prediction and the futures ARE frames (or frame-deltas).
             # Compare directly — high-signal (a 20px move is unmissable) and visible.
             # The observed next-frame is the positive; the same-state counterfactual
